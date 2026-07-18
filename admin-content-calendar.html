@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1B4D8C">
+<title>Content Calendar — Ironclad Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#1B4D8C;--red-dk:#0B2E52;--ink:#15171A;--ink3:#6B7280;--bg:#F2F4F7;--card:#FFFFFF;--line:#E5E7EB;--green:#1E9E5A;--green-lt:#E3F5EC;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px;padding-bottom:40px}
+.topbar{background:var(--ink);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+.wordmark{font-family:'Oswald';font-weight:800;font-size:17px;text-transform:uppercase}
+.badge{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:var(--red);padding:3px 9px;border-radius:20px}
+.wrap{max-width:700px;margin:0 auto;padding:20px 16px}
+h1{font-family:'Oswald';font-size:20px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.sub{font-size:12.5px;color:var(--ink3);margin-bottom:18px;line-height:1.5}
+.back-link{font-size:12.5px;color:var(--red);text-decoration:none;font-weight:700;display:inline-block;margin-bottom:14px}
+.week-label{font-family:'Oswald';font-size:14px;font-weight:700;text-transform:uppercase;color:var(--red-dk);margin:22px 0 10px}
+.post-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;gap:12px}
+.post-card.done{opacity:.55}
+.post-check{margin-top:3px;cursor:pointer;width:18px;height:18px;flex-shrink:0}
+.post-day{font-family:'Oswald';font-size:11px;font-weight:700;text-transform:uppercase;color:var(--red);margin-bottom:2px}
+.post-type{font-size:11px;color:var(--ink3);margin-bottom:6px}
+.post-caption{font-size:13px;line-height:1.5;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wordmark">Ironclad</div>
+  <div class="badge">Content Calendar</div>
+</div>
+<div class="wrap">
+  <a href="admin-dashboard.html" class="back-link">&larr; Back to Online Clients</a>
+  <h1>Content Calendar</h1>
+  <div class="sub">Five posts a week — Mon/Tue/Wed/Fri/Sat, two rest days so it never reads as bombarding. Repeats as a 4-week cycle; swap in real talking-head or gym-floor video for the tagged slots as you film them. Check off as you post.</div>
+  <div id="calendarBody"></div>
+</div>
+<script>
+const WORKER = WORKER_URL;
+let SESSION = null;
+(function(){
+  const saved = localStorage.getItem('ironclad_admin_session');
+  if (!saved) { location.href = 'admin-login.html'; return; }
+  try { SESSION = JSON.parse(saved); } catch(e) { location.href = 'admin-login.html'; return; }
+  render();
+  loadPostedState();
+})();
+
+const CALENDAR = [
+  { week: 1, posts: [
+    { day: 'Monday — Motivation', type: '📱 Static post / graphic', caption: "You already know what you want to change. The only thing standing between here and there is starting. Quick 2-minute assessment → your exact plan, matched to your goals. No guessing, no generic templates. Link in bio." },
+    { day: 'Tuesday — Education', type: '🎥 Talking-head video', caption: "Most diets fail for one reason: they treat every calorie the same. Protein, carbs, and fat each do a completely different job — get that balance wrong and it doesn't matter how hard you train. Free 2-minute quiz, link in bio." },
+    { day: 'Wednesday — Program Spotlight', type: '🏋️ Gym floor video', caption: "This is Iron Protocol — the program our most advanced lifters run. 5 days a week, real weight, real results. Free quiz matches you to your own version. Link in bio." },
+    { day: 'Friday — Coach Story', type: '🏋️ Gym floor / behind-the-scenes video', caption: "15+ years in fitness, a former MMA athlete, and 15 years running a restaurant taught me one thing: most people fail not from lack of effort, but from following the wrong plan for their body and goals. Built a system to fix that. Free assessment, link in bio. 💪" },
+    { day: 'Saturday — Quiz Push', type: '📱 Static post / graphic', caption: "Have you ever wondered why every other diet and exercise program failed you? Take my quick 2-minute quiz to find out why — link in bio. 💪" },
+  ]},
+  { week: 2, posts: [
+    { day: 'Monday — Motivation', type: '📱 Static post / graphic', caption: "Building something real here — a complete training + nutrition system, beginner to advanced, with an actual coach behind it (that's me 👋). Take the free assessment and be one of the first to try it. Link in bio." },
+    { day: 'Tuesday — Education', type: '🎥 Talking-head video', caption: "Most people quit for the wrong reason — the scale doesn't move, so they think nothing's working. Truth is, muscle and fat can trade places and the number stays exactly the same. That's why real body composition tracking matters more than a bathroom scale. Free quiz, link in bio." },
+    { day: 'Wednesday — Program Spotlight', type: '🏋️ Gym floor video', caption: "True Tabata — 20 seconds max effort, 10 seconds rest, 8 rounds, exactly 4 brutal minutes. Not the watered-down 'Tabata-style' circuit everyone else calls it. Free quiz matches you to the right program. Link in bio." },
+    { day: 'Friday — Coach Story', type: '🎥 Talking-head video', caption: "Quick question: do you actually know what training split fits YOUR goal, or are you just doing what everyone else in the gym is doing? Quick 2-minute assessment tells you exactly what to run — beginner through advanced, nutrition included. Link in bio. 🎯" },
+    { day: 'Saturday — Quiz Push', type: '📱 Static post / graphic', caption: "Not sure where to start? Take our quick 2-minute assessment and get matched with a real training program — beginner to advanced — plus nutrition guidance built around your actual goals. No generic templates. Link in bio. 💪" },
+  ]},
+  { week: 3, posts: [
+    { day: 'Monday — Motivation', type: '📱 Static post / graphic', caption: "Every year you wait is a year you don't get back. The plan works whether you start today or in six months — the only difference is which six months you get back. Free 2-minute quiz, link in bio." },
+    { day: 'Tuesday — Education', type: '🎥 Talking-head video', caption: "Real talk — most people fail not from lack of effort, they fail from following someone else's plan for their body. 15 years of coaching has taught me that. Free assessment matches your actual plan to your actual goals. Link in bio." },
+    { day: 'Wednesday — Program Spotlight', type: '🏋️ Gym floor video', caption: "German Volume Training — 10 sets of 10 on the big lifts. This is not a beginner program. This is for people chasing serious size. See if it's your match — free quiz, link in bio." },
+    { day: 'Friday — Coach Story', type: '🏋️ Gym floor / behind-the-scenes video', caption: "MMA background. 15 years as a restaurant owner and chef before that. Now I coach people through the same discipline I use myself. Free quiz shows you what that looks like for your goals. Link in bio." },
+    { day: 'Saturday — Quiz Push', type: '📱 Static post / graphic', caption: "Free quiz. Real plan. No generic templates. Link in bio. That's it, that's the post." },
+  ]},
+  { week: 4, posts: [
+    { day: 'Monday — Motivation', type: '📱 Static post / graphic', caption: "Confidence isn't something you wait to feel before you start — it's what shows up after you do. Free 2-minute quiz gets you moving. Link in bio." },
+    { day: 'Tuesday — Education', type: '🎥 Talking-head video', caption: "You don't need to cut carbs to lose fat. You need the right amount of protein, carbs, and fat for YOUR goal. That's the whole difference between a real plan and a generic diet app. Free quiz, link in bio." },
+    { day: 'Wednesday — Program Spotlight', type: '🏋️ Gym floor video', caption: "Full-body supersets, HIIT finishers, built for fat loss without losing the muscle you've worked for. Free quiz matches your goal to the right plan. Link in bio." },
+    { day: 'Friday — Coach Story', type: '🎥 Talking-head video', caption: "Fire & Life Safety Specialist by day, your coach the rest of the time. Same discipline either way. Free quiz, link in bio." },
+    { day: 'Saturday — Quiz Push', type: '📱 Static post / graphic', caption: "Take the quiz. Get your plan. See what changes. Link in bio." },
+  ]},
+];
+
+function render(){
+  const body = document.getElementById('calendarBody');
+  body.innerHTML = CALENDAR.map(w => `
+    <div class="week-label">Week ${w.week}</div>
+    ${w.posts.map((p, i) => `
+      <div class="post-card" id="post-${w.week}-${i}">
+        <input type="checkbox" class="post-check" data-slot="w${w.week}-${i}" onchange="togglePosted(this)">
+        <div>
+          <div class="post-day">${p.day}</div>
+          <div class="post-type">${p.type}</div>
+          <div class="post-caption">${esc(p.caption)}</div>
+        </div>
+      </div>`).join('')}
+  `).join('');
+}
+
+async function loadPostedState(){
+  // Best-effort -- if this fails, the calendar still renders and works,
+  // it just won't remember checked state across visits.
+  try {
+    const r = await fetch(WORKER + '/admin/content-calendar?token=' + encodeURIComponent(SESSION.token));
+    const d = await r.json();
+    (d.posted || []).forEach(slot => {
+      const box = document.querySelector('[data-slot="'+slot+'"]');
+      if (box) { box.checked = true; box.closest('.post-card').classList.add('done'); }
+    });
+  } catch(e) {}
+}
+
+async function togglePosted(box){
+  box.closest('.post-card').classList.toggle('done', box.checked);
+  try {
+    await fetch(WORKER + '/admin/content-calendar', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: SESSION.token, slot_key: box.dataset.slot, posted: box.checked })
+    });
+  } catch(e) {}
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

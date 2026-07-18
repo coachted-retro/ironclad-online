@@ -309,6 +309,85 @@ export default {
         return ok({ changed: true }, cors);
       }
 
+      // ── REVIEWS ────────────────────────────────────────────────
+      // Every review, good or bad, always reaches Ted -- nothing is
+      // filtered before it lands here. "consent_to_feature" is the
+      // client explicitly agreeing their name/words can be used
+      // publicly; admin approval on top of that is what actually
+      // controls what goes live. Neither step ever hides a review
+      // from Ted himself.
+      if (url.pathname === '/client/submit-review' && request.method === 'POST') {
+        if (!env.DB) return bad('No DB', cors);
+        const b = await request.json().catch(() => ({}));
+        const claims = await verifyToken(b.token, SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        const rating = parseInt(b.rating, 10);
+        if (!rating || rating < 1 || rating > 5) return bad('rating (1-5) required', cors);
+        await env.DB.prepare('INSERT INTO reviews (client_id,rating,comment,consent_to_feature) VALUES (?,?,?,?)')
+          .bind(claims.id, rating, b.comment || null, b.consent_to_feature ? 1 : 0).run();
+        return ok({ submitted: true }, cors);
+      }
+
+      if (url.pathname === '/admin/reviews' && request.method === 'GET') {
+        if (!env.DB) return bad('No DB', cors);
+        const claims = await verifyToken(url.searchParams.get('token'), SECRET);
+        if (!claims || claims.role !== 'admin') return bad('Unauthorized', cors);
+        const rows = await env.DB.prepare(`
+          SELECT r.*, c.first_name, c.last_name FROM reviews r
+          JOIN clients c ON c.id = r.client_id ORDER BY r.created_at DESC
+        `).all();
+        return ok({ reviews: rows.results || [] }, cors);
+      }
+
+      if (url.pathname === '/admin/reviews/status' && request.method === 'POST') {
+        if (!env.DB) return bad('No DB', cors);
+        const b = await request.json().catch(() => ({}));
+        const claims = await verifyToken(b.token, SECRET);
+        if (!claims || claims.role !== 'admin') return bad('Unauthorized', cors);
+        if (!['approved', 'declined', 'pending'].includes(b.status)) return bad('Invalid status', cors);
+        await env.DB.prepare('UPDATE reviews SET status=? WHERE id=?').bind(b.status, b.review_id).run();
+        return ok({ updated: true }, cors);
+      }
+
+      if (url.pathname === '/reviews/featured' && request.method === 'GET') {
+        // Public endpoint -- only ever returns reviews that are BOTH
+        // client-consented AND admin-approved. Never exposes rating,
+        // comment, or existence of any review that fails either check.
+        if (!env.DB) return bad('No DB', cors);
+        const rows = await env.DB.prepare(`
+          SELECT r.rating, r.comment, c.first_name FROM reviews r
+          JOIN clients c ON c.id = r.client_id
+          WHERE r.consent_to_feature = 1 AND r.status = 'approved'
+          ORDER BY r.created_at DESC LIMIT 12
+        `).all();
+        return ok({ reviews: rows.results || [] }, cors);
+      }
+
+      if (url.pathname === '/admin/content-calendar' && request.method === 'GET') {
+        if (!env.DB) return bad('No DB', cors);
+        const claims = await verifyToken(url.searchParams.get('token'), SECRET);
+        if (!claims || claims.role !== 'admin') return bad('Unauthorized', cors);
+        const rows = await env.DB.prepare('SELECT slot_key FROM content_calendar_log WHERE posted=1').all();
+        return ok({ posted: (rows.results || []).map(r => r.slot_key) }, cors);
+      }
+
+      if (url.pathname === '/admin/content-calendar' && request.method === 'POST') {
+        if (!env.DB) return bad('No DB', cors);
+        const b = await request.json().catch(() => ({}));
+        const claims = await verifyToken(b.token, SECRET);
+        if (!claims || claims.role !== 'admin') return bad('Unauthorized', cors);
+        if (!b.slot_key) return bad('slot_key required', cors);
+        const existing = await env.DB.prepare('SELECT id FROM content_calendar_log WHERE slot_key=?').bind(b.slot_key).first();
+        if (existing) {
+          await env.DB.prepare('UPDATE content_calendar_log SET posted=?, posted_date=? WHERE slot_key=?')
+            .bind(b.posted ? 1 : 0, b.posted ? new Date().toISOString() : null, b.slot_key).run();
+        } else {
+          await env.DB.prepare('INSERT INTO content_calendar_log (slot_key,posted,posted_date) VALUES (?,?,?)')
+            .bind(b.slot_key, b.posted ? 1 : 0, b.posted ? new Date().toISOString() : null).run();
+        }
+        return ok({ saved: true }, cors);
+      }
+
       if (url.pathname === '/admin/clients' && request.method === 'GET') {
         if (!env.DB) return bad('No DB', cors);
         const claims = await verifyToken(url.searchParams.get('token'), SECRET);

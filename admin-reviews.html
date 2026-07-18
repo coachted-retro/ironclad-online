@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1B4D8C">
+<title>Reviews — Ironclad Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#1B4D8C;--red-dk:#0B2E52;--ink:#15171A;--ink3:#6B7280;--bg:#F2F4F7;--card:#FFFFFF;--line:#E5E7EB;--green:#1E9E5A;--green-lt:#E3F5EC;--amber:#B45309;--amber-lt:#FEF3C7;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px;padding-bottom:40px}
+.topbar{background:var(--ink);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+.wordmark{font-family:'Oswald';font-weight:800;font-size:17px;text-transform:uppercase}
+.badge{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:var(--red);padding:3px 9px;border-radius:20px}
+.wrap{max-width:700px;margin:0 auto;padding:20px 16px}
+h1{font-family:'Oswald';font-size:20px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.sub{font-size:12.5px;color:var(--ink3);margin-bottom:18px}
+.back-link{font-size:12.5px;color:var(--red);text-decoration:none;font-weight:700;display:inline-block;margin-bottom:14px}
+.review-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.review-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.review-name{font-weight:700}
+.stars{color:var(--red);font-size:15px}
+.review-comment{font-size:13px;color:var(--ink);line-height:1.5;margin-bottom:10px}
+.consent-tag{font-size:10.5px;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:20px;margin-bottom:10px;display:inline-block}
+.consent-yes{background:var(--green-lt);color:var(--green)}
+.consent-no{background:#F3F4F6;color:var(--ink3)}
+.status-row{display:flex;gap:8px}
+.status-btn{font-family:'Oswald';font-size:11px;font-weight:700;text-transform:uppercase;padding:7px 12px;border-radius:7px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--ink3)}
+.status-btn.active-approved{background:var(--green-lt);border-color:var(--green);color:var(--green)}
+.status-btn.active-declined{background:#FDEDE7;border-color:#DC2626;color:#DC2626}
+.empty{text-align:center;padding:50px 20px;color:var(--ink3)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wordmark">Ironclad</div>
+  <div class="badge">Reviews</div>
+</div>
+<div class="wrap">
+  <a href="admin-dashboard.html" class="back-link">&larr; Back to Online Clients</a>
+  <h1>Reviews</h1>
+  <div class="sub">Every review reaches you, always. "Approved" is the only thing that controls what's eligible to show up publicly — and only for reviews the client also agreed to feature.</div>
+  <div id="reviewList"></div>
+</div>
+<script>
+const WORKER = WORKER_URL;
+let SESSION = null;
+(function(){
+  const saved = localStorage.getItem('ironclad_admin_session');
+  if (!saved) { location.href = 'admin-login.html'; return; }
+  try { SESSION = JSON.parse(saved); } catch(e) { location.href = 'admin-login.html'; return; }
+  loadReviews();
+})();
+
+async function loadReviews(){
+  const el = document.getElementById('reviewList');
+  try {
+    const r = await fetch(WORKER + '/admin/reviews?token=' + encodeURIComponent(SESSION.token));
+    const d = await r.json();
+    if (!d.ok) { location.href = 'admin-login.html'; return; }
+    const reviews = d.reviews || [];
+    if (!reviews.length) { el.innerHTML = '<div class="empty">No reviews submitted yet.</div>'; return; }
+    el.innerHTML = reviews.map(rv => `
+      <div class="review-card">
+        <div class="review-top">
+          <div class="review-name">${esc(rv.first_name)} ${esc(rv.last_name||'')}</div>
+          <div class="stars">${'★'.repeat(rv.rating)}${'☆'.repeat(5-rv.rating)}</div>
+        </div>
+        ${rv.comment ? `<div class="review-comment">${esc(rv.comment)}</div>` : ''}
+        <div class="consent-tag ${rv.consent_to_feature ? 'consent-yes' : 'consent-no'}">${rv.consent_to_feature ? 'Client OK to feature' : 'Client did not consent to feature'}</div>
+        <div class="status-row">
+          <button class="status-btn ${rv.status==='approved'?'active-approved':''}" onclick="setStatus(${rv.id},'approved')">Approve</button>
+          <button class="status-btn ${rv.status==='declined'?'active-declined':''}" onclick="setStatus(${rv.id},'declined')">Decline</button>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty">Could not load reviews — check your connection and refresh.</div>';
+  }
+}
+
+async function setStatus(reviewId, status){
+  try {
+    const r = await fetch(WORKER + '/admin/reviews/status', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: SESSION.token, review_id: reviewId, status })
+    });
+    const d = await r.json();
+    if (!d.ok) { alert(d.error || 'Could not update review.'); return; }
+    loadReviews();
+  } catch(e) { alert('Connection error, try again.'); }
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

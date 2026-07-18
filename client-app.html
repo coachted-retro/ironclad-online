@@ -81,6 +81,16 @@ body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-se
       <div class="section-label">Past Check-Ins</div>
       <div id="checkinHistory"></div>
     </div>
+    <div class="card">
+      <div class="section-label">Rate Your Experience</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin-bottom:12px">Every review reaches your coach directly — good or bad. We'll only ever feature it publicly if you say yes below.</div>
+      <div id="starRow" style="display:flex;gap:6px;margin-bottom:12px;font-size:28px">
+        <span class="star" data-val="1">☆</span><span class="star" data-val="2">☆</span><span class="star" data-val="3">☆</span><span class="star" data-val="4">☆</span><span class="star" data-val="5">☆</span>
+      </div>
+      <textarea id="reviewComment" placeholder="Tell us about your experience (optional)" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;font-family:'Inter';font-size:13px;margin-bottom:10px;min-height:60px"></textarea>
+      <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;font-size:12.5px;color:var(--ink);margin-bottom:12px"><input type="checkbox" id="reviewConsent" style="margin-top:2px"> It's okay to feature this publicly with my first name</label>
+      <button class="btn-primary" onclick="submitReview()">Submit Review</button>
+    </div>
   </div>
   <div id="chatView" style="display:none">
     <div class="card">
@@ -135,6 +145,35 @@ async function submitCheckin(){
     document.getElementById('ciQuestions').value = '';
     alert('Check-in submitted — your coach will follow up if needed.');
     loadCheckinHistory();
+  } catch(e) { alert('Connection error, try again.'); }
+}
+
+let SELECTED_RATING = 0;
+document.querySelectorAll('#starRow .star').forEach(el => {
+  el.style.cursor = 'pointer';
+  el.onclick = () => {
+    SELECTED_RATING = parseInt(el.dataset.val, 10);
+    document.querySelectorAll('#starRow .star').forEach(s => {
+      s.textContent = parseInt(s.dataset.val, 10) <= SELECTED_RATING ? '★' : '☆';
+      s.style.color = parseInt(s.dataset.val, 10) <= SELECTED_RATING ? '#1B4D8C' : '';
+    });
+  };
+});
+
+async function submitReview(){
+  if (!SELECTED_RATING) { alert('Please select a star rating.'); return; }
+  try {
+    const r = await fetch(WORKER + '/client/submit-review', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: SESSION.token, rating: SELECTED_RATING, comment: document.getElementById('reviewComment').value.trim() || null, consent_to_feature: document.getElementById('reviewConsent').checked })
+    });
+    const d = await r.json();
+    if (!d.ok) { alert(d.error || 'Could not submit review.'); return; }
+    alert('Thanks for the feedback — it goes straight to your coach.');
+    document.getElementById('reviewComment').value = '';
+    document.getElementById('reviewConsent').checked = false;
+    SELECTED_RATING = 0;
+    document.querySelectorAll('#starRow .star').forEach(s => { s.textContent = '☆'; s.style.color = ''; });
   } catch(e) { alert('Connection error, try again.'); }
 }
 
