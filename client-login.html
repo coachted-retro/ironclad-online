@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1B4D8C">
+<title>Sign In — Ironclad</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#1B4D8C;--red-dk:#0B2E52;--red-lt:#EAF1FA;--ink:#15171A;--ink3:#6B7280;--bg:#F2F4F7;--card:#FFFFFF;--line:#E5E7EB;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.wrap{max-width:400px;width:100%}
+.wordmark{font-family:'Oswald';font-weight:800;font-size:24px;text-transform:uppercase;text-align:center;margin-bottom:24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px 24px}
+h1{font-family:'Oswald';font-size:19px;font-weight:700;text-transform:uppercase;margin-bottom:18px}
+.field{margin-bottom:14px}
+label{font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--ink3);display:block;margin-bottom:6px}
+input{width:100%;border:1.5px solid var(--line);border-radius:9px;padding:11px 12px;font-family:'Inter';font-size:14px;background:#fff}
+input:focus{outline:none;border-color:var(--red)}
+.submit-btn{width:100%;font-family:'Oswald';font-size:15px;font-weight:700;text-transform:uppercase;background:var(--red);color:#fff;border:none;padding:13px;border-radius:9px;cursor:pointer;margin-top:6px}
+.submit-btn:hover{background:var(--red-dk)}
+.err{background:var(--red-lt);color:var(--red-dk);border:1px solid #B9CFE8;border-radius:8px;padding:9px 12px;font-size:12px;margin-top:14px;display:none}
+.change-box{display:none;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="wordmark">Ironclad</div>
+  <div class="card">
+    <h1 id="formTitle">Sign In</h1>
+    <div id="loginFields">
+      <div class="field"><label>Email</label><input type="email" id="cEmail" autocomplete="email"></div>
+      <div class="field"><label>Password</label><input type="password" id="cPassword" autocomplete="current-password"></div>
+      <button class="submit-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+    </div>
+    <div class="change-box" id="changeBox">
+      <p style="font-size:13px;color:var(--ink3);margin-bottom:14px">First time signing in — set a permanent password.</p>
+      <div class="field"><label>New Password</label><input type="password" id="newPassword" autocomplete="new-password"></div>
+      <button class="submit-btn" onclick="doChangePassword()">Set Password &amp; Continue</button>
+    </div>
+    <div class="err" id="errBox"></div>
+  </div>
+</div>
+<script>
+const WORKER = WORKER_URL;
+let PENDING_EMAIL = '', PENDING_PASSWORD = '';
+(function(){
+  const saved = localStorage.getItem('ironclad_client_session');
+  if (saved) { try { JSON.parse(saved); location.href = 'client-app.html'; } catch(e) { localStorage.removeItem('ironclad_client_session'); } }
+})();
+async function doLogin(){
+  const email = document.getElementById('cEmail').value.trim();
+  const password = document.getElementById('cPassword').value;
+  const errEl = document.getElementById('errBox');
+  errEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Enter your email and password.'; errEl.style.display = 'block'; return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const r = await fetch(WORKER + '/client/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password}) });
+    const d = await r.json();
+    if (!d.ok) { errEl.textContent = d.error || 'Invalid email or password.'; errEl.style.display = 'block'; btn.disabled=false; btn.textContent='Sign In'; return; }
+    if (d.must_change) {
+      PENDING_EMAIL = email; PENDING_PASSWORD = password;
+      document.getElementById('formTitle').textContent = 'Set Your Password';
+      document.getElementById('loginFields').style.display = 'none';
+      document.getElementById('changeBox').style.display = 'block';
+      return;
+    }
+    localStorage.setItem('ironclad_client_session', JSON.stringify({ token: d.token, client_id: d.client_id, email }));
+    location.href = 'client-app.html';
+  } catch(e) {
+    errEl.textContent = 'Connection error, try again.'; errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+async function doChangePassword(){
+  const newPassword = document.getElementById('newPassword').value;
+  const errEl = document.getElementById('errBox');
+  errEl.style.display = 'none';
+  if (!newPassword || newPassword.length < 8) { errEl.textContent = 'New password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
+  try {
+    const r = await fetch(WORKER + '/client/change-password', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email: PENDING_EMAIL, old_password: PENDING_PASSWORD, new_password: newPassword }) });
+    const d = await r.json();
+    if (!d.ok) { errEl.textContent = d.error || 'Could not update password.'; errEl.style.display = 'block'; return; }
+    const loginR = await fetch(WORKER + '/client/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email: PENDING_EMAIL, password: newPassword }) });
+    const loginD = await loginR.json();
+    if (loginD.ok) {
+      localStorage.setItem('ironclad_client_session', JSON.stringify({ token: loginD.token, client_id: loginD.client_id, email: PENDING_EMAIL }));
+      location.href = 'client-app.html';
+    }
+  } catch(e) {
+    errEl.textContent = 'Connection error, try again.'; errEl.style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>

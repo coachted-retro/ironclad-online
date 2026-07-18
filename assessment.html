@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="config.js"></script>
+<script src="bundles-library.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="icon" type="image/x-icon" href="icons-strong/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="icons-strong/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons-strong/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons-strong/apple-touch-icon.png">
+<meta name="theme-color" content="#1B4D8C">
+<title>Get Your Plan — Ironclad</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#1B4D8C;--red-dk:#0B2E52;--red-lt:#EAF1FA;--ink:#15171A;--ink2:#374151;--ink3:#6B7280;--bg:#F2F4F7;--card:#FFFFFF;--soft:#F8F9FB;--line:#E5E7EB;--green:#1E9E5A;--green-lt:#E3F5EC;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px;min-height:100vh}
+.hero{background:var(--ink);color:#fff;padding:32px 20px 26px;text-align:center}
+.hero .kicker{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7CA9DC;margin-bottom:8px}
+.hero h1{font-family:'Oswald';font-size:26px;font-weight:800;text-transform:uppercase;line-height:1.15}
+.hero p{font-size:13px;color:#D1D5DB;margin-top:8px;max-width:420px;margin-left:auto;margin-right:auto}
+.wrap{max-width:520px;margin:0 auto;padding:22px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.section-label{font-family:'Oswald';font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
+.field{margin-bottom:14px}
+label{font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--ink3);display:block;margin-bottom:5px}
+label .req{color:var(--red)}
+input[type=text],input[type=tel],input[type=email],select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:11px 12px;font-family:'Inter';font-size:14px;color:var(--ink);background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red)}
+textarea{resize:vertical;min-height:70px;line-height:1.5}
+.hint{font-size:11px;color:var(--ink3);margin-top:5px;line-height:1.4}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.choice{border:1.5px solid var(--line);border-radius:10px;padding:12px 10px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink2)}
+.choice.selected{border-color:var(--red);background:var(--red-lt);color:var(--red-dk)}
+.submit-btn{width:100%;font-family:'Oswald';font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:var(--red);color:#fff;border:none;padding:15px;border-radius:10px;cursor:pointer;margin-top:4px}
+.submit-btn:hover{background:var(--red-dk)}
+.submit-btn:disabled{background:#D1D5DB;cursor:not-allowed}
+.err{background:var(--red-lt);color:var(--red-dk);border:1px solid #B9CFE8;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:14px;display:none}
+.results{display:none}
+.results .check{width:56px;height:56px;border-radius:50%;background:var(--green-lt);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px}
+.results h2{font-family:'Oswald';font-size:20px;font-weight:800;text-transform:uppercase;text-align:center;margin-bottom:6px}
+.results .sub{font-size:13px;color:var(--ink3);text-align:center;max-width:380px;margin:0 auto 20px}
+.rec-card{border-top:3px solid var(--red);border-radius:10px;background:var(--soft);padding:16px;margin-bottom:12px}
+.rec-card .rec-icon{font-size:26px;margin-bottom:6px}
+.rec-card .rec-name{font-family:'Oswald';font-size:16px;font-weight:800;text-transform:uppercase;margin-bottom:4px}
+.rec-card .rec-desc{font-size:12.5px;color:var(--ink2);line-height:1.5;margin-bottom:8px}
+.rec-card .rec-days{font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.3px}
+.nutrition-note{font-size:12.5px;color:var(--ink2);line-height:1.6;background:var(--soft);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.nutrition-note b{color:var(--ink)}
+.footer-badge{text-align:center;font-size:11px;color:var(--ink3);margin-top:8px}
+.footer-badge b{color:var(--red)}
+.progress{display:flex;gap:4px;margin-bottom:18px}
+.progress span{flex:1;height:4px;border-radius:2px;background:var(--line)}
+.progress span.done{background:var(--red)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="kicker">Free Personalized Plan</div>
+  <h1>What's Your Goal?</h1>
+  <p>Answer a few quick questions and we'll match you with the right training program and nutrition approach — built from the same system our coaches use.</p>
+</div>
+
+<div class="wrap">
+  <div class="card" style="text-align:center;padding:24px 20px">
+    <img src="img/coach-ted.png" alt="Coach Ted Scholl" style="width:100%;max-width:280px;margin:0 auto 14px;display:block">
+    <div class="section-label" style="margin-bottom:2px">Meet Your Coach</div>
+    <div style="font-family:'Oswald';font-size:20px;font-weight:800;text-transform:uppercase;margin-bottom:10px">Coach Ted</div>
+    <div style="font-size:13px;color:var(--ink2);line-height:1.65;text-align:left">
+      Ironclad was built by someone who's lived on every side of it. A former mixed martial arts athlete, Ted is now a full-time fitness advisor and personal trainer — and spent 15 years as a restaurant owner and chef before that, building a real command of food that goes beyond fine dining into what actually makes a healthy, sustainable diet work. That's exactly why the nutrition side of this isn't an afterthought. He also works as a Fire &amp; Life Safety Specialist, the same discipline and attention to detail that goes into every program here.
+      <br><br>
+      That background is why Ironclad isn't just a workout app. It's a complete system — training programs that scale from true beginner through intermediate to the most advanced lifters chasing serious size and strength, paired with nutrition guidance built around your actual goals, not a generic calculator.
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <form class="card" id="assessForm" onsubmit="submitAssessment(event)">
+    <div class="progress"><span class="done"></span><span></span><span></span></div>
+
+    <div class="section-label">Your Info</div>
+    <div class="field">
+      <label>Full Name <span class="req">*</span></label>
+      <input type="text" id="fName" required autocomplete="name">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="fEmail" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Phone</label>
+        <input type="tel" id="fPhone" autocomplete="tel">
+      </div>
+    </div>
+    <div class="hint" style="margin:-6px 0 14px">Give us at least one way to send you your results.</div>
+
+    <div class="section-label">Your Goal <span class="req">*</span></div>
+    <div class="choice-grid" id="goalChoices" style="margin-bottom:16px">
+      <div class="choice" data-val="build">Build Muscle</div>
+      <div class="choice" data-val="cut">Lose Fat</div>
+      <div class="choice" data-val="strength">Get Stronger</div>
+      <div class="choice" data-val="general">General Fitness</div>
+    </div>
+
+    <div class="section-label">Experience Level <span class="req">*</span></div>
+    <div class="choice-grid" id="expChoices" style="margin-bottom:16px">
+      <div class="choice" data-val="beginner">Beginner<br><span style="font-weight:400;font-size:11px">New or &lt;6 months</span></div>
+      <div class="choice" data-val="intermediate">Intermediate<br><span style="font-weight:400;font-size:11px">6mo&ndash;2 years</span></div>
+      <div class="choice" data-val="advanced" style="grid-column:1/3">Advanced<br><span style="font-weight:400;font-size:11px">2+ years, training seriously</span></div>
+    </div>
+
+    <div class="section-label">Days Per Week Available <span class="req">*</span></div>
+    <div class="choice-grid" id="daysChoices" style="margin-bottom:16px">
+      <div class="choice" data-val="2">2&ndash;3 Days</div>
+      <div class="choice" data-val="4">3&ndash;4 Days</div>
+      <div class="choice" data-val="5" style="grid-column:1/3">5+ Days</div>
+    </div>
+
+    <div class="section-label">Anything We Should Know</div>
+    <div class="field">
+      <label>Injuries or Physical Limitations</label>
+      <textarea id="fInjuries" placeholder="e.g. bad knee, lower back issues — or leave blank"></textarea>
+    </div>
+    <div class="field">
+      <label>Dietary Restrictions or Preferences</label>
+      <textarea id="fDietary" placeholder="e.g. vegetarian, gluten-free — or leave blank"></textarea>
+    </div>
+
+    <div class="err" id="errBox"></div>
+    <button type="submit" class="submit-btn" id="submitBtn">Get My Plan</button>
+    <div class="footer-badge">Powered by <b>Ironclad</b></div>
+  </form>
+
+  <div class="card results" id="resultsCard">
+    <div class="check">✓</div>
+    <h2>Your Plan Is Ready</h2>
+    <div class="sub" id="resultsSub"></div>
+    <div id="recList"></div>
+    <div class="nutrition-note" id="macrosNote" style="border-left:3px solid var(--red)"></div>
+    <div class="nutrition-note" id="outlookNote"></div>
+    <div class="nutrition-note" id="nutritionNote"></div>
+    <div class="nutrition-note" id="supplementNote"></div>
+
+    <div class="section-label" style="margin-top:4px">Why Ironclad</div>
+    <div class="nutrition-note" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center">
+      <div><div style="font-size:22px">🥊</div><div style="font-size:11.5px;font-weight:700;color:var(--ink);margin-top:2px">Former MMA Athlete</div></div>
+      <div><div style="font-size:22px">🏋️</div><div style="font-size:11.5px;font-weight:700;color:var(--ink);margin-top:2px">15+ Yrs in Fitness</div></div>
+      <div><div style="font-size:22px">🍳</div><div style="font-size:11.5px;font-weight:700;color:var(--ink);margin-top:2px">15 Yrs Restaurant Owner &amp; Chef</div></div>
+      <div><div style="font-size:22px">🧯</div><div style="font-size:11.5px;font-weight:700;color:var(--ink);margin-top:2px">Fire &amp; Life Safety Specialist</div></div>
+    </div>
+
+    <div class="nutrition-note" style="background:var(--red-lt);border:1px solid #B9CFE8">
+      <b>Founding Member Pricing</b> — the rate you lock in today is the rate you keep for as long as you stay subscribed, even after prices go up for new members. Most people already know what they want to change — the only thing standing between here and there is starting. The plan works whether you start today or six months from now; the only difference is which six months you get back.
+    </div>
+
+    <div class="section-label" style="margin-top:4px">Choose Your Plan</div>
+    <a href="" id="ctaAdvantage" class="submit-btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;position:relative">
+      Start My Membership — Annual <span style="font-weight:400">($189/yr)</span>
+    </a>
+    <div class="hint" style="text-align:center;margin:2px 0 12px;color:var(--green);font-weight:700">Best value — 2 months free vs. paying monthly</div>
+    <a href="" id="ctaFlex" class="submit-btn secondary" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;background:#fff;color:var(--red);border:1.5px solid var(--red)">
+      Or Pay Monthly ($18.99/mo)
+    </a>
+    <div class="hint" style="text-align:center;margin:10px 0 4px;color:var(--green);font-weight:700">✓ 7-day money-back guarantee — not for you, full refund, no questions asked.</div>
+    <div class="hint" style="text-align:center;margin:0 0 14px">Cancel anytime. You'll get your login the moment payment goes through.</div>
+
+    <div class="section-label">Questions</div>
+    <div class="nutrition-note">
+      <b>What if I don't have a gym?</b> Most programs are built around standard gym equipment, but several bundles (TRX, kettlebell, bands, bodyweight) are made to run anywhere — a coach will help you pick the right one during onboarding.<br><br>
+      <b>What if I'm a total beginner?</b> That's exactly who the Beginner Foundation program is built for — every plan is matched to your actual experience level, not a one-size-fits-all routine.<br><br>
+      <b>Can I really cancel anytime?</b> Yes — no contracts, no minimum commitment. Cancel from your account whenever you want.<br><br>
+      <b>What if I don't like it?</b> You're covered by the 7-day guarantee above — full refund, no hoops to jump through.
+    </div>
+    <div class="footer-badge">Powered by <b>Ironclad</b></div>
+  </div>
+</div>
+
+<script>
+const WORKER = WORKER_URL;
+// Live Square "Take a payment" checkout links (Payments > Online Checkout
+// > Add Button to Website), one per plan, each set to Exact amount +
+// recurring Frequency. Update here if either link is ever regenerated.
+const SQUARE_CHECKOUT_URL_ADVANTAGE = 'https://square.link/u/BKlatLgi';
+const SQUARE_CHECKOUT_URL_FLEX = 'https://square.link/u/NjTJtV70';
+let SELECTED = { goal: null, experience: null, days: null };
+
+function wireChoices(groupId, key) {
+  document.querySelectorAll('#' + groupId + ' .choice').forEach(el => {
+    el.onclick = () => {
+      document.querySelectorAll('#' + groupId + ' .choice').forEach(x => x.classList.remove('selected'));
+      el.classList.add('selected');
+      SELECTED[key] = el.dataset.val;
+    };
+  });
+}
+wireChoices('goalChoices', 'goal');
+wireChoices('expChoices', 'experience');
+wireChoices('daysChoices', 'days');
+
+const GOAL_LABELS = { build: 'Build Muscle', cut: 'Lose Fat', strength: 'Get Stronger', general: 'General Fitness' };
+const DAYS_LABELS = { '2': '2-3 days/week', '4': '3-4 days/week', '5': '5+ days/week' };
+const EXPERIENCE_FRAMING = {
+  beginner: "you're just getting started — which means almost every week ahead brings visible, measurable progress if you stay consistent",
+  intermediate: "you've already built a base — the next phase is about tightening up technique and pushing past the plateaus that trip most people up",
+  advanced: "you're training seriously already — from here it's precision: smarter periodization, not just more effort"
+};
+function buildMacrosNote() {
+  return `<b>Why most programs actually fail you:</b> Almost every diet and workout program treats calories as interchangeable — "just eat less." Your body doesn't work that way. Protein, carbs, and fat each do a completely different job, and getting that balance wrong is the real reason so many plans stall out or bounce back.
+  <br><br>
+  <b>Protein</b> preserves and builds the muscle you're training for — skip it, and a chunk of every pound you lose is muscle, not fat. <b>Carbs</b> fuel the actual training that changes your body — starve them, and your workouts fall apart before your physique does. <b>Fat</b> regulates the hormones behind hunger, energy, and recovery — cut it too hard and you're fighting your own body the whole way.
+  <br><br>
+  A generic app hands you one calorie number and calls it done. Ironclad's plan is built around getting this ratio right for your specific goal, with a real coach dialing in your exact numbers — that's the actual unlock, not just eating less.`;
+}
+
+function buildOutlook(goal, experience) {
+  const framing = EXPERIENCE_FRAMING[experience] || EXPERIENCE_FRAMING.general;
+  return `<b>Where you are, and where this takes you:</b> Right now, ${framing}. Our programs run in 8-week phases that build on each other — over the next 6 to 12 months, that's 3 to 6 full phases, each one adjusting intensity and technique so your body keeps adapting instead of plateauing. This isn't a 30-day challenge — it's designed as a long-term system for building a genuinely better lifestyle, one you can sustain well past the first few months.`;
+}
+
+const SUPPLEMENT_LINK = 'https://1stphorm.com/?a_aid=coachted';
+function buildSupplementNote() {
+  return `<b>Fuel the work:</b> Your coach can also point you toward quality supplementation to support your goals — protein, recovery, and performance products from 1st Phorm. <a href="${SUPPLEMENT_LINK}" target="_blank" rel="noopener" style="color:var(--red);font-weight:700">Browse recommended products &rarr;</a><br><span style="font-size:10.5px;color:var(--ink3)">Disclosure: Ironclad is a 1st Phorm affiliate and may earn a commission on purchases made through this link.</span>`;
+}
+
+const NUTRITION_NOTES = {
+  build: "To build muscle, you'll want to be eating enough to fuel growth — consistent meals with adequate protein at every sitting. We'll dial in your exact targets once you're training with a coach.",
+  cut: "For fat loss, consistency in a modest calorie deficit beats anything extreme — paired with enough protein to hold onto the muscle you've got. We'll set your exact targets once you're training with a coach.",
+  strength: "Getting stronger needs enough fuel to recover between heavy sessions, with protein spread through the day. We'll dial in your exact targets once you're training with a coach.",
+  general: "For general fitness, the goal is a sustainable, balanced way of eating you can actually stick with. We'll tailor it to you once you're training with a coach."
+};
+
+function recommendBundles() {
+  const { goal, experience } = SELECTED;
+  let pool = BUNDLES.filter(b => b.goal.includes(goal));
+  const recs = [];
+  // Beginners get a foundation-first recommendation before their goal-specific split
+  if (experience === 'beginner') {
+    const foundation = BUNDLES.find(b => b.id === 'beginner_foundation');
+    if (foundation) recs.push(foundation);
+  }
+  const goalMatch = pool.find(b => !recs.includes(b));
+  if (goalMatch) recs.push(goalMatch);
+  if (!recs.length && BUNDLES.length) recs.push(BUNDLES[0]);
+  return recs.slice(0, 2);
+}
+
+async function submitAssessment(e) {
+  e.preventDefault();
+  const errBox = document.getElementById('errBox');
+  errBox.style.display = 'none';
+
+  const name = document.getElementById('fName').value.trim();
+  const email = document.getElementById('fEmail').value.trim();
+  const phone = document.getElementById('fPhone').value.trim();
+
+  if (!name) { errBox.textContent = 'Please enter your name.'; errBox.style.display = 'block'; return; }
+  if (!email && !phone) { errBox.textContent = 'Please provide an email or phone number.'; errBox.style.display = 'block'; return; }
+  if (!SELECTED.goal) { errBox.textContent = 'Please select your goal.'; errBox.style.display = 'block'; return; }
+  if (!SELECTED.experience) { errBox.textContent = 'Please select your experience level.'; errBox.style.display = 'block'; return; }
+  if (!SELECTED.days) { errBox.textContent = 'Please select your available days.'; errBox.style.display = 'block'; return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Building Your Plan...';
+
+  const recs = recommendBundles();
+  const nameParts = name.split(/\s+/);
+  const payload = {
+    first_name: nameParts[0],
+    last_name: nameParts.slice(1).join(' ') || null,
+    email: email || null,
+    phone: phone || null,
+    goal_primary: GOAL_LABELS[SELECTED.goal],
+    experience: SELECTED.experience,
+    days_per_week: DAYS_LABELS[SELECTED.days],
+    sessions_per_week: parseInt(SELECTED.days, 10),
+    injuries: document.getElementById('fInjuries').value.trim() || null,
+    dietary: document.getElementById('fDietary').value.trim() || null,
+    recommended_bundle_id: recs[0] ? recs[0].id : null,
+    recommended_bundle_name: recs.map(r => r.name).join(', ')
+  };
+
+  try {
+    const r = await fetch(WORKER + '/assessment/submit', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Submit failed');
+
+    document.getElementById('resultsSub').textContent =
+      `Based on your goal (${GOAL_LABELS[SELECTED.goal]}) and experience level, here's what we recommend:`;
+    document.getElementById('recList').innerHTML = recs.map(b => `
+      <div class="rec-card" style="border-top-color:${b.accent}">
+        <div class="rec-icon">${b.icon}</div>
+        <div class="rec-name">${b.name}</div>
+        <div class="rec-desc">${b.desc}</div>
+        <div class="rec-days" style="color:${b.accent}">${b.days}</div>
+      </div>`).join('');
+    document.getElementById('macrosNote').innerHTML = buildMacrosNote();
+    document.getElementById('outlookNote').innerHTML = buildOutlook(SELECTED.goal, SELECTED.experience);
+    document.getElementById('nutritionNote').innerHTML =
+      `<b>Nutrition:</b> ${NUTRITION_NOTES[SELECTED.goal]}`;
+    document.getElementById('supplementNote').innerHTML = buildSupplementNote();
+
+    document.getElementById('ctaAdvantage').href = SQUARE_CHECKOUT_URL_ADVANTAGE;
+    document.getElementById('ctaFlex').href = SQUARE_CHECKOUT_URL_FLEX;
+
+    document.getElementById('assessForm').style.display = 'none';
+    document.getElementById('resultsCard').style.display = 'block';
+  } catch (err) {
+    errBox.textContent = 'Something went wrong saving your results. Please try again.';
+    errBox.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Get My Plan';
+  }
+}
+</script>
+</body>
+</html>

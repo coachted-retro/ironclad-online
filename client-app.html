@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="config.js"></script>
+<script src="bundles-library.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1B4D8C">
+<title>My Training — Ironclad</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#1B4D8C;--red-dk:#0B2E52;--ink:#15171A;--ink2:#374151;--ink3:#6B7280;--bg:#F2F4F7;--card:#FFFFFF;--soft:#F8F9FB;--line:#E5E7EB;--green:#1E9E5A;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px;padding-bottom:40px}
+.topbar{background:var(--ink);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+.wordmark{font-family:'Oswald';font-weight:800;font-size:17px;text-transform:uppercase}
+.tab-btn{background:none;border:none;color:#B8BCC4;font-size:12px;font-weight:700;cursor:pointer;padding:6px 10px}
+.tab-btn.active{color:#fff;border-bottom:2px solid var(--red)}
+.wrap{max-width:600px;margin:0 auto;padding:20px 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px}
+.section-label{font-family:'Oswald';font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+.bundle-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bundle-card{border:1.5px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center}
+.bundle-card:hover{border-color:var(--red)}
+.bundle-icon{font-size:24px;margin-bottom:4px}
+.bundle-name{font-size:12px;font-weight:700}
+.program-name{font-family:'Oswald';font-size:18px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.routine-pill{display:inline-block;background:var(--soft);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:12.5px;font-weight:600;margin:0 6px 6px 0;cursor:pointer}
+.routine-pill:hover{border-color:var(--red)}
+.ex-row{padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.ex-row:last-child{border-bottom:none}
+.btn-primary{width:100%;font-family:'Oswald';font-weight:700;font-size:14px;text-transform:uppercase;background:var(--red);color:#fff;border:none;padding:12px;border-radius:9px;cursor:pointer;margin-top:12px}
+.btn-primary:hover{background:var(--red-dk)}
+.chat-box{height:280px;overflow-y:auto;display:flex;flex-direction:column;padding:8px 0}
+.chat-input-row{display:flex;gap:8px;margin-top:10px}
+.chat-input-row input{flex:1;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px}
+.chat-send{background:var(--red);color:#fff;border:none;border-radius:9px;padding:0 16px;font-weight:700;cursor:pointer}
+.empty{text-align:center;padding:30px 20px;color:var(--ink3)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wordmark">Ironclad</div>
+  <div>
+    <button class="tab-btn active" id="tabTraining" onclick="switchTab('training')">Training</button>
+    <button class="tab-btn" id="tabChat" onclick="switchTab('chat')">Coach Chat</button>
+  </div>
+</div>
+<div class="wrap">
+  <div id="trainingView">
+    <div class="card" id="programCard">
+      <div class="section-label">Your Program</div>
+      <div id="programContent">Loading...</div>
+    </div>
+    <div class="card">
+      <div class="section-label">Choose a Different Program</div>
+      <div class="bundle-grid" id="bundleGrid"></div>
+    </div>
+  </div>
+  <div id="chatView" style="display:none">
+    <div class="card">
+      <div class="section-label">Coach Chat</div>
+      <div class="chat-box" id="chatBox"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Message your coach...">
+        <button class="chat-send" onclick="sendChat()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const WORKER = WORKER_URL;
+let SESSION = null, CURRENT_BUNDLE = null, ACTIVE_ROUTINE_IDX = null;
+
+(function(){
+  const saved = localStorage.getItem('ironclad_client_session');
+  if (!saved) { location.href = 'client-login.html'; return; }
+  try { SESSION = JSON.parse(saved); } catch(e) { location.href = 'client-login.html'; return; }
+  loadMe();
+  renderBundleGrid();
+})();
+
+function switchTab(tab){
+  document.getElementById('trainingView').style.display = tab === 'training' ? 'block' : 'none';
+  document.getElementById('chatView').style.display = tab === 'chat' ? 'block' : 'none';
+  document.getElementById('tabTraining').classList.toggle('active', tab === 'training');
+  document.getElementById('tabChat').classList.toggle('active', tab === 'chat');
+  if (tab === 'chat') loadChat();
+}
+
+async function loadMe(){
+  try {
+    const r = await fetch(WORKER + '/client/me?token=' + encodeURIComponent(SESSION.token));
+    const d = await r.json();
+    if (!d.ok) { location.href = 'client-login.html'; return; }
+    renderProgram(d.program);
+  } catch(e) {
+    document.getElementById('programContent').innerHTML = '<div class="empty">Could not load your program.</div>';
+  }
+}
+
+function renderProgram(program){
+  const el = document.getElementById('programContent');
+  if (!program) {
+    el.innerHTML = '<div class="empty">No program selected yet — pick one below to get started.</div>';
+    return;
+  }
+  CURRENT_BUNDLE = BUNDLES.find(b => b.id === program.bundle_id);
+  if (!CURRENT_BUNDLE) { el.innerHTML = '<div class="empty">Program not found in catalog.</div>'; return; }
+  el.innerHTML = `
+    <div class="program-name">${CURRENT_BUNDLE.icon} ${esc(CURRENT_BUNDLE.name)}</div>
+    <div style="font-size:12.5px;color:var(--ink3);margin-bottom:12px">${esc(CURRENT_BUNDLE.desc)}</div>
+    <div id="routinePills">${CURRENT_BUNDLE.routines.map((r,i) => `<span class="routine-pill" onclick="showRoutine(${i})">${esc(r.label)}</span>`).join('')}</div>
+    <div id="routineDetail" style="margin-top:14px"></div>`;
+}
+
+function showRoutine(idx){
+  ACTIVE_ROUTINE_IDX = idx;
+  const routine = CURRENT_BUNDLE.routines[idx];
+  document.getElementById('routineDetail').innerHTML = `
+    <div class="section-label" style="margin-top:6px">${esc(routine.label)}</div>
+    ${routine.exercises.map(ex => `
+      <div class="ex-row">
+        <div style="font-weight:600">${esc(ex.name)}</div>
+        <div style="color:var(--ink3);font-size:12px">${ex.sets ? esc(String(ex.sets))+' sets × '+esc(String(ex.reps)) : ''}${ex.rest ? ' · Rest '+esc(ex.rest) : ''}</div>
+      </div>`).join('')}
+    <button class="btn-primary" onclick="logWorkout()">Log This Workout</button>`;
+}
+
+async function logWorkout(){
+  if (ACTIVE_ROUTINE_IDX === null) return;
+  const routine = CURRENT_BUNDLE.routines[ACTIVE_ROUTINE_IDX];
+  try {
+    const r = await fetch(WORKER + '/client/log-workout', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token: SESSION.token, log_date: new Date().toISOString().slice(0,10), routine_label: routine.label, bundle_id: CURRENT_BUNDLE.id, exercises: routine.exercises.map(e=>e.name) })
+    });
+    const d = await r.json();
+    if (!d.ok) { alert(d.error || 'Could not log workout.'); return; }
+    alert('Workout logged — nice work.');
+  } catch(e) { alert('Connection error, try again.'); }
+}
+
+function renderBundleGrid(){
+  document.getElementById('bundleGrid').innerHTML = BUNDLES.map(b => `
+    <div class="bundle-card" onclick="selectProgram('${b.id}')">
+      <div class="bundle-icon">${b.icon}</div>
+      <div class="bundle-name">${esc(b.name)}</div>
+    </div>`).join('');
+}
+
+async function selectProgram(bundleId){
+  const bundle = BUNDLES.find(b => b.id === bundleId);
+  if (!bundle) return;
+  try {
+    const r = await fetch(WORKER + '/client/select-program', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token: SESSION.token, bundle_id: bundle.id, bundle_name: bundle.name })
+    });
+    const d = await r.json();
+    if (!d.ok) { alert(d.error || 'Could not select program.'); return; }
+    loadMe();
+  } catch(e) { alert('Connection error, try again.'); }
+}
+
+async function loadChat(){
+  const box = document.getElementById('chatBox');
+  try {
+    const r = await fetch(WORKER + '/portal/messages?client_id=' + SESSION.client_id);
+    const d = await r.json();
+    const msgs = d.messages || [];
+    box.innerHTML = msgs.length ? msgs.map(m => `
+      ${m.sender==='coach' && m.coach_name ? `<div style="font-size:10.5px;font-weight:700;color:var(--ink3);margin:6px 0 2px 2px">${esc(m.coach_name)}</div>` : ''}
+      <div style="max-width:75%;padding:8px 12px;border-radius:12px;font-size:13px;margin-bottom:4px;${m.sender==='client'?'align-self:flex-end;background:var(--red);color:#fff;margin-left:auto':'align-self:flex-start;background:var(--soft)'}">${esc(m.body)}</div>
+    `).join('') : '<div class="empty">Say hi to your coach!</div>';
+    box.scrollTop = box.scrollHeight;
+  } catch(e) {}
+}
+
+async function sendChat(){
+  const input = document.getElementById('chatInput');
+  const body = input.value.trim();
+  if (!body) return;
+  await fetch(WORKER + '/portal/messages/send', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ client_id: SESSION.client_id, sender:'client', body }) });
+  input.value = '';
+  loadChat();
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

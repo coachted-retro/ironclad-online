@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1B4D8C">
+<title>Online Clients — Ironclad Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#1B4D8C;--red-dk:#0B2E52;--ink:#15171A;--ink3:#6B7280;--bg:#F2F4F7;--card:#FFFFFF;--line:#E5E7EB;--green:#1E9E5A;--green-lt:#E3F5EC;--amber:#B45309;--amber-lt:#FEF3C7;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px;padding-bottom:40px}
+.topbar{background:var(--ink);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+.wordmark{font-family:'Oswald';font-weight:800;font-size:17px;text-transform:uppercase}
+.badge{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:var(--red);padding:3px 9px;border-radius:20px}
+.wrap{max-width:700px;margin:0 auto;padding:20px 16px}
+h1{font-family:'Oswald';font-size:20px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.sub{font-size:12.5px;color:var(--ink3);margin-bottom:18px}
+.client-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.client-name{font-weight:700;font-size:14.5px}
+.client-meta{font-size:12px;color:var(--ink3);margin-top:2px}
+.status-pill{font-size:10.5px;font-weight:700;text-transform:uppercase;padding:3px 9px;border-radius:20px}
+.status-active{background:var(--green-lt);color:var(--green)}
+.status-prospect{background:var(--amber-lt);color:var(--amber)}
+.status-other{background:#F3F4F6;color:var(--ink3)}
+.empty{text-align:center;padding:50px 20px;color:var(--ink3)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wordmark">Ironclad</div>
+  <div class="badge">Online Clients</div>
+</div>
+<div class="wrap">
+  <h1>Online Clients</h1>
+  <div class="sub">Public subscription signups only — completely separate from Retro Fitness Fairless Hills' own clients and systems.</div>
+  <div id="clientList"></div>
+</div>
+<script>
+const WORKER = WORKER_URL;
+let SESSION = null;
+(function(){
+  const saved = localStorage.getItem('ironclad_admin_session');
+  if (!saved) { location.href = 'admin-login.html'; return; }
+  try { SESSION = JSON.parse(saved); } catch(e) { location.href = 'admin-login.html'; return; }
+  loadClients();
+})();
+
+async function loadClients(){
+  const listEl = document.getElementById('clientList');
+  try {
+    const r = await fetch(WORKER + '/admin/clients?token=' + encodeURIComponent(SESSION.token));
+    const d = await r.json();
+    if (!d.ok) { location.href = 'admin-login.html'; return; }
+    const clients = d.clients || [];
+    if (!clients.length) {
+      listEl.innerHTML = "<div class=\"empty\">No online signups yet — they'll show up here automatically the moment someone completes the assessment or subscribes.</div>";
+      return;
+    }
+    listEl.innerHTML = clients.map(c => {
+      const statusClass = c.status === 'active' ? 'status-active' : c.status === 'prospect' ? 'status-prospect' : 'status-other';
+      return `
+      <div class="client-card">
+        <div>
+          <div class="client-name">${esc(c.first_name)} ${esc(c.last_name || '')}</div>
+          <div class="client-meta">${esc(c.goal_primary || 'No goal set')}${c.email ? ' · ' + esc(c.email) : ''}${c.subscription_plan ? ' · ' + esc(c.subscription_plan) : ''}</div>
+        </div>
+        <div class="status-pill ${statusClass}">${esc(c.status)}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div class="empty">Could not load clients — check your connection and refresh.</div>';
+  }
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>
