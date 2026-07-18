@@ -8,3 +8,6 @@ workers_dev = true
 binding = "DB"
 database_name = "ironclad-online-db"
 database_id = "f0912421-e088-49dc-a912-18555e29bc75"
+
+[triggers]
+crons = ["0 13 * * *"]

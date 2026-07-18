@@ -74,6 +74,90 @@ async function generateAICoachMessage(env, client, workoutInfo) {
   } catch (e) { /* best-effort */ }
 }
 
+// ── DRIP CAMPAIGN ────────────────────────────────────────────────
+// Five touches over three weeks, for prospects who took the
+// assessment but haven't converted (no active subscription_plan set)
+// yet. Tone throughout: confidence and trust first, persuasion last --
+// never a countdown/urgency trick, always a real, low-pressure path to
+// actually enrolling by the final email.
+const DRIP_STAGES = [
+  { day: 0, subject: (n) => `Welcome, ${n} — here's what happens next` },
+  { day: 3, subject: () => `You already did the hard part` },
+  { day: 7, subject: () => `The real reason most plans don't work` },
+  { day: 14, subject: (n) => `Still thinking it over, ${n}?` },
+  { day: 21, subject: () => `No pressure — just leaving the door open` }
+];
+
+function buildDripEmail(stage, client) {
+  const name = client.first_name || 'there';
+  const goal = client.goal_primary || 'your goals';
+  const program = client.onboarding_json ? (JSON.parse(client.onboarding_json).answers?.recommended_bundle_name || null) : null;
+
+  const bodies = [
+    // Day 0 -- warm welcome, sets expectation of a real human, not just an inbox
+    `<p>Hey ${name},</p>
+     <p>Thanks for taking the assessment. Based on what you shared, we matched you toward <b>${goal}</b>${program ? ` with a program built around <b>${program}</b>` : ''} — that's already sitting in your results.</p>
+     <p>A real coach reviews every assessment personally, not just an algorithm. If anything about your results raises a question, just reply to this email — it comes straight to us.</p>
+     <p>Talk soon,<br>Coach Ted</p>`,
+    // Day 3 -- pure encouragement, zero pitch
+    `<p>Hey ${name},</p>
+     <p>Just a quick one — most people never get past thinking about it. You already filled out a real assessment and got a real plan back. That's further than most people ever go.</p>
+     <p>Whatever pace you take from here, that's a genuine head start, not nothing.</p>
+     <p>Coach Ted</p>`,
+    // Day 7 -- value/education touch, builds trust through substance
+    `<p>Hey ${name},</p>
+     <p>Quick thing worth knowing: most programs fail people not from lack of effort, but because they treat every calorie the same. Protein, carbs, and fat each do a completely different job in your body — get that balance wrong and it doesn't matter how hard you train.</p>
+     <p>That's exactly why your plan pairs training with real nutrition guidance, not a generic calculator. It's built to actually work with how your body responds, not against it.</p>
+     <p>Coach Ted</p>`,
+    // Day 14 -- soft check-in, addresses hesitation directly and honestly
+    `<p>Hey ${name},</p>
+     <p>Still thinking it over? That's completely normal — starting something new is genuinely the hardest part, harder than any workout in the program.</p>
+     <p>If something specific is holding you back — time, cost, not knowing where to start — just reply and tell me. I'd rather answer the real question than have it be the reason you don't start.</p>
+     <p>Coach Ted</p>`,
+    // Day 21 -- final touch, low-pressure but with a clear, easy path to act
+    `<p>Hey ${name},</p>
+     <p>Last note from me on this — I don't want to keep filling your inbox. The door's open whenever you're ready, no expiration on that.</p>
+     <p>Your plan is still saved and ready to go whenever you want to start:</p>
+     <p><a href="https://myironcladfit.com/assessment.html" style="display:inline-block;background:#1B4D8C;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">See My Plan Again &rarr;</a></p>
+     <p>Rooting for you either way,<br>Coach Ted</p>`
+  ];
+  return bodies[DRIP_STAGES.indexOf(stage)];
+}
+
+async function sendDripCampaign(env) {
+  if (!env.RESEND_KEY || !env.DB) return;
+  try {
+    const rows = await env.DB.prepare(`
+      SELECT * FROM clients
+      WHERE status = 'prospect' AND (subscription_plan IS NULL OR subscription_plan = '')
+        AND email IS NOT NULL AND drip_stage < ${DRIP_STAGES.length}
+    `).all();
+    const now = new Date();
+
+    for (const client of (rows.results || [])) {
+      try {
+        const stage = DRIP_STAGES[client.drip_stage];
+        const createdAt = new Date(client.created_at);
+        const daysSinceSignup = Math.floor((now - createdAt) / 86400000);
+        if (daysSinceSignup < stage.day) continue;
+        if (client.drip_last_sent) {
+          const daysSinceLastSend = Math.floor((now - new Date(client.drip_last_sent)) / 86400000);
+          if (daysSinceLastSend < 1) continue; // never double-send same day, safety net
+        }
+
+        const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;font-size:15px;line-height:1.6;color:#15171A">${buildDripEmail(stage, client)}</div>`;
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from: env.MAIL_FROM || 'onboarding@resend.dev', to: [client.email], subject: stage.subject(client.first_name), html })
+        });
+        await env.DB.prepare('UPDATE clients SET drip_stage = drip_stage + 1, drip_last_sent = ? WHERE id = ?')
+          .bind(now.toISOString(), client.id).run();
+      } catch (e) { /* one client's failure shouldn't block the rest of the batch */ }
+    }
+  } catch (e) { /* best-effort nightly job */ }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const cors = {
@@ -343,5 +427,9 @@ export default {
     } catch (e) {
       return bad('Server error: ' + e.message, cors);
     }
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(sendDripCampaign(env));
   }
 };
