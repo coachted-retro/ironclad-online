@@ -295,8 +295,16 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
 
     <div id="outOfRangeSection" style="display:none">
       <div class="nutrition-note" style="border-left:3px solid var(--amber, #B45309)">
-        <b>You're outside our in-person service area</b> — in-person coaching is local to Ironclad Fitness at Retro Fitness Fairless Hills, and your zip code is a bit further out than we can offer hands-on sessions. Good news: everything else — the training programs, nutrition guidance, and AI coaching — works exactly the same remotely, from anywhere.
+        <b>You're outside our in-person service area</b> — in-person coaching is local to Ironclad Fitness at Retro Fitness Fairless Hills, and your zip code is a bit further out than we can offer hands-on sessions. Good news — you don't have to give up a real coach to get there.
       </div>
+      <div class="nutrition-note" style="border-left:3px solid var(--green)">
+        <b>Ironclad Remote — $129/mo</b><br><br>
+        A real coach, not just AI — your program is built around your video check-ins, not a template. Send us video of your lifts and we'll coach your form, technique, and safety directly. Regular FaceTime check-ins, live nutrition coaching, and progress tracking — the same hands-on relationship as in-person, just not in the same room.
+      </div>
+      <a href="" id="ctaRemote" class="submit-btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;background:var(--green);margin-bottom:16px">
+        Start Remote Coaching
+      </a>
+      <div class="hint" style="text-align:center;margin:-10px 0 16px">Or go fully self-guided with the AI-coached plans below.</div>
     </div>
 
     <div class="section-label">Questions</div>
@@ -316,6 +324,9 @@ const WORKER = WORKER_URL;
 // > Add Button to Website), one per plan, each set to Exact amount +
 // recurring Frequency. Update here if either link is ever regenerated.
 const SQUARE_CHECKOUT_URL_ADVANTAGE = 'https://square.link/u/BKlatLgi';
+// TODO: confirm with Ted -- placeholder until the Remote Coaching Square
+// item + checkout link is created.
+const SQUARE_CHECKOUT_URL_REMOTE = '';
 // TODO: confirm with Ted -- placeholder using the existing reschedule/
 // booking calendar link until he confirms the actual new-consultation
 // booking flow he wants in-person leads routed to.
@@ -552,6 +563,7 @@ async function submitAssessment(e) {
     } else if (SELECTED.trainPref === 'in_person' && !inPersonEligible) {
       document.getElementById('outOfRangeSection').style.display = 'block';
       document.getElementById('onlinePlanSection').style.display = 'block';
+      document.getElementById('ctaRemote').href = SQUARE_CHECKOUT_URL_REMOTE || '#';
       document.getElementById('ctaAdvantage').href = SQUARE_CHECKOUT_URL_ADVANTAGE;
       document.getElementById('ctaFlex').href = SQUARE_CHECKOUT_URL_FLEX;
     } else {
