@@ -119,6 +119,12 @@ function render(d){
     </div>
 
     <div class="card">
+      <div class="section-label">Nutrition Logs (${d.nutrition.length})</div>
+      ${d.nutrition.length ? d.nutrition.map(n => `
+        <div class="log-row"><b>${esc(n.meal_type)}</b> — ${new Date(n.logged_at).toLocaleDateString()}${n.adherence_rating ? ' · adherence: ' + esc(String(n.adherence_rating)) + '/5' : ''}${n.description ? `<div style="color:var(--ink3);margin-top:2px">${esc(n.description)}</div>` : ''}</div>`).join('') : '<div class="empty">No meals logged yet.</div>'}
+    </div>
+
+    <div class="card">
       <div class="section-label">Recent Workouts (${d.workouts.length})</div>
       ${d.workouts.length ? d.workouts.map(w => `<div class="log-row"><b>${new Date(w.log_date).toLocaleDateString()}</b> — ${esc(w.routine_label || 'Workout')}</div>`).join('') : '<div class="empty">No workouts logged yet.</div>'}
     </div>

@@ -74,6 +74,28 @@ async function generateAICoachMessage(env, client, workoutInfo) {
   } catch (e) { /* best-effort */ }
 }
 
+// Meal-log reaction -- deliberately light-touch, same rule as the
+// pt-tools precedent: acknowledgment only, never nutrition advice or
+// macro commentary. That stays a human coach's call, not the AI's.
+async function generateAICoachMealMessage(env, client, mealType, mealDesc) {
+  if (!env.ANTHROPIC_KEY || !client) return;
+  try {
+    const clientName = ((client.first_name || '') + ' ' + (client.last_name || '')).trim() || 'there';
+    const sys = `You are the AI training assistant for Ironclad Fitness. A client just logged ${mealType} in their nutrition tracker. Write ONE short message (2-3 sentences max) -- brief acknowledgment and encouragement for staying consistent with tracking, genuine and specific if details are given, never generic filler. This is not the place for nutrition advice or calorie/macro commentary -- that's the coach's job, not yours. Never invent facts you weren't given. No "As an AI" disclaimer -- sender identity is shown separately in the app.`;
+    const user = `Client: ${clientName}\nGoal: ${client.goal_primary || 'not specified'}\nJust logged: ${mealType}${mealDesc ? ' -- ' + mealDesc : ''}`;
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 200, system: sys, messages: [{ role: 'user', content: user }] })
+    });
+    const data = await resp.json();
+    const text = (data.content && data.content[0] && data.content[0].text || '').trim();
+    if (!text) return;
+    await env.DB.prepare('INSERT INTO portal_messages (client_id,coach_name,sender,body) VALUES (?,?,?,?)')
+      .bind(client.id, 'Ironclad AI Coach', 'coach', text).run();
+  } catch (e) { /* best-effort */ }
+}
+
 // ── DRIP CAMPAIGN ────────────────────────────────────────────────
 // Five touches over three weeks, for prospects who took the
 // assessment but haven't converted (no active subscription_plan set)
@@ -393,7 +415,11 @@ export default {
         const claims = await verifyToken(url.searchParams.get('token'), SECRET);
         if (!claims || claims.role !== 'admin') return bad('Unauthorized', cors);
         const rows = await env.DB.prepare(`
-          SELECT c.*, (SELECT MAX(submitted_at) FROM weekly_checkins WHERE client_id=c.id) as last_checkin
+          SELECT c.*,
+            (SELECT MAX(submitted_at) FROM weekly_checkins WHERE client_id=c.id) as last_checkin,
+            (SELECT MAX(log_date) FROM workout_logs WHERE client_id=c.id) as last_workout,
+            (SELECT MAX(logged_at) FROM nutrition_logs WHERE client_id=c.id) as last_nutrition,
+            (SELECT soreness_pain FROM weekly_checkins WHERE client_id=c.id ORDER BY submitted_at DESC LIMIT 1) as latest_soreness
           FROM clients c ORDER BY c.created_at DESC
         `).all();
         return ok({ clients: rows.results || [] }, cors);
@@ -410,19 +436,21 @@ export default {
         if (!clientId) return bad('client_id required', cors);
         const client = await env.DB.prepare('SELECT * FROM clients WHERE id=?').bind(clientId).first();
         if (!client) return bad('Client not found', cors);
-        const [program, workouts, checkins, reviews, messages] = await Promise.all([
+        const [program, workouts, checkins, reviews, messages, nutrition] = await Promise.all([
           env.DB.prepare('SELECT * FROM client_programs WHERE client_id=? AND active=1 ORDER BY selected_at DESC LIMIT 1').bind(clientId).first(),
           env.DB.prepare('SELECT * FROM workout_logs WHERE client_id=? ORDER BY log_date DESC LIMIT 20').bind(clientId).all(),
           env.DB.prepare('SELECT * FROM weekly_checkins WHERE client_id=? ORDER BY submitted_at DESC LIMIT 12').bind(clientId).all(),
           env.DB.prepare('SELECT * FROM reviews WHERE client_id=? ORDER BY created_at DESC').bind(clientId).all(),
-          env.DB.prepare('SELECT * FROM portal_messages WHERE client_id=? ORDER BY created_at DESC LIMIT 20').bind(clientId).all()
+          env.DB.prepare('SELECT * FROM portal_messages WHERE client_id=? ORDER BY created_at DESC LIMIT 20').bind(clientId).all(),
+          env.DB.prepare('SELECT * FROM nutrition_logs WHERE client_id=? ORDER BY logged_at DESC LIMIT 20').bind(clientId).all()
         ]);
         let onboarding = null;
         try { onboarding = client.onboarding_json ? JSON.parse(client.onboarding_json).answers : null; } catch (e) {}
         return ok({
           client, onboarding, program: program || null,
           workouts: workouts.results || [], checkins: checkins.results || [],
-          reviews: reviews.results || [], messages: messages.results || []
+          reviews: reviews.results || [], messages: messages.results || [],
+          nutrition: nutrition.results || []
         }, cors);
       }
 
@@ -508,6 +536,29 @@ export default {
         if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
         const rows = await env.DB.prepare('SELECT * FROM weekly_checkins WHERE client_id=? ORDER BY submitted_at DESC LIMIT 12').bind(claims.id).all();
         return ok({ checkins: rows.results || [] }, cors);
+      }
+
+      // ── NUTRITION LOGGING (Ironclad Online's own, separate from
+      // Retro's meal logging in pt-tools/retro-crm) ──────────────
+      if (url.pathname === '/client/log-nutrition' && request.method === 'POST') {
+        if (!env.DB) return bad('No DB', cors);
+        const b = await request.json().catch(() => ({}));
+        const claims = await verifyToken(b.token, SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        if (!b.meal_type) return bad('meal_type required', cors);
+        await env.DB.prepare('INSERT INTO nutrition_logs (client_id,meal_type,description,adherence_rating) VALUES (?,?,?,?)')
+          .bind(claims.id, b.meal_type, b.description || null, b.adherence_rating || null).run();
+        const client = await env.DB.prepare('SELECT * FROM clients WHERE id=?').bind(claims.id).first();
+        ctx.waitUntil(generateAICoachMealMessage(env, client, b.meal_type, b.description || null));
+        return ok({ logged: true }, cors);
+      }
+
+      if (url.pathname === '/client/nutrition-logs' && request.method === 'GET') {
+        if (!env.DB) return bad('No DB', cors);
+        const claims = await verifyToken(url.searchParams.get('token'), SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        const rows = await env.DB.prepare('SELECT * FROM nutrition_logs WHERE client_id=? ORDER BY logged_at DESC LIMIT 30').bind(claims.id).all();
+        return ok({ logs: rows.results || [] }, cors);
       }
 
       // ── PORTAL MESSAGES (client <-> AI coach / Ted) ────────────

@@ -18,13 +18,16 @@ body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-se
 h1{font-family:'Oswald';font-size:20px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
 .sub{font-size:12.5px;color:var(--ink3);margin-bottom:18px}
 .client-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.client-card.needs-attention{border-color:#DC2626;background:#FEF5F5}
 .client-name{font-weight:700;font-size:14.5px}
 .client-meta{font-size:12px;color:var(--ink3);margin-top:2px}
 .status-pill{font-size:10.5px;font-weight:700;text-transform:uppercase;padding:3px 9px;border-radius:20px}
 .status-active{background:var(--green-lt);color:var(--green)}
 .status-prospect{background:var(--amber-lt);color:var(--amber)}
 .status-other{background:#F3F4F6;color:var(--ink3)}
+.attn-pill{font-size:10.5px;font-weight:700;text-transform:uppercase;padding:3px 9px;border-radius:20px;background:#FDEDE7;color:#B91C1C;margin-left:6px}
 .empty{text-align:center;padding:50px 20px;color:var(--ink3)}
+.section-label{font-family:'Oswald';font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);margin:18px 0 10px}
 </style>
 </head>
 <body>
@@ -37,6 +40,7 @@ h1{font-family:'Oswald';font-size:20px;font-weight:700;text-transform:uppercase;
   <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
     <a href="admin-reviews.html" style="font-size:12px;font-weight:700;color:var(--red);text-decoration:none">Reviews &rarr;</a>
     <a href="admin-content-calendar.html" style="font-size:12px;font-weight:700;color:var(--red);text-decoration:none">Content Calendar &rarr;</a>
+    <a href="https://calendar.app.google/7Jqmko6cBxCwLyA78" target="_blank" style="font-size:12px;font-weight:700;color:var(--red);text-decoration:none">Monthly Call Calendar &rarr;</a>
     <a href="https://portal.myironcladfit.com/coach-crm.html" target="_blank" style="font-size:12px;font-weight:700;color:var(--ink3);text-decoration:none">Retro / Coach CRM &#8599;</a>
   </div>
   <div class="sub">Public subscription signups only — completely separate from Retro Fitness Fairless Hills' own clients and systems.</div>
@@ -52,6 +56,22 @@ let SESSION = null;
   loadClients();
 })();
 
+// A client "needs attention" if they're an active paying client but have
+// gone 7+ days without any logged activity (workout, nutrition, or
+// check-in), or their most recent check-in mentioned soreness/pain --
+// this is a signal to look closer, not a diagnosis.
+function daysSince(dateStr){
+  if (!dateStr) return Infinity;
+  return Math.floor((new Date() - new Date(dateStr)) / 86400000);
+}
+function needsAttention(c){
+  if (c.status !== 'active') return false;
+  const lastActivity = Math.min(daysSince(c.last_checkin), daysSince(c.last_workout), daysSince(c.last_nutrition));
+  if (lastActivity >= 7) return true;
+  if (c.latest_soreness && c.latest_soreness.trim()) return true;
+  return false;
+}
+
 async function loadClients(){
   const listEl = document.getElementById('clientList');
   try {
@@ -63,16 +83,28 @@ async function loadClients(){
       listEl.innerHTML = "<div class=\"empty\">No online signups yet — they'll show up here automatically the moment someone completes the assessment or subscribes.</div>";
       return;
     }
+    // Sort so anyone flagged needs-attention surfaces first, not buried
+    // in signup-date order.
+    clients.sort((a,b) => (needsAttention(b)?1:0) - (needsAttention(a)?1:0));
     listEl.innerHTML = clients.map(c => {
       const statusClass = c.status === 'active' ? 'status-active' : c.status === 'prospect' ? 'status-prospect' : 'status-other';
+      const flagged = needsAttention(c);
+      const lastActivity = Math.min(daysSince(c.last_checkin), daysSince(c.last_workout), daysSince(c.last_nutrition));
+      let activityLine = 'No activity logged yet';
+      if (lastActivity !== Infinity) {
+        activityLine = lastActivity === 0 ? 'Active today' : `Last activity ${lastActivity} day${lastActivity===1?'':'s'} ago`;
+      }
       return `
-      <div class="client-card" onclick="location.href='admin-client-detail.html?id=${c.id}'" style="cursor:pointer">
+      <div class="client-card ${flagged ? 'needs-attention' : ''}" onclick="location.href='admin-client-detail.html?id=${c.id}'" style="cursor:pointer">
         <div>
           <div class="client-name">${esc(c.first_name)} ${esc(c.last_name || '')}</div>
           <div class="client-meta">${esc(c.goal_primary || 'No goal set')}${c.email ? ' · ' + esc(c.email) : ''}${c.subscription_plan ? ' · ' + esc(c.subscription_plan) : ''}</div>
-          <div class="client-meta">${c.last_checkin ? 'Last check-in: ' + new Date(c.last_checkin).toLocaleDateString() : 'No check-ins yet'}</div>
+          <div class="client-meta">${activityLine}${c.latest_soreness ? ' · flagged soreness/pain in last check-in' : ''}</div>
         </div>
-        <div class="status-pill ${statusClass}">${esc(c.status)}</div>
+        <div>
+          <span class="status-pill ${statusClass}">${esc(c.status)}</span>
+          ${flagged ? '<span class="attn-pill">Needs Attention</span>' : ''}
+        </div>
       </div>`;
     }).join('');
   } catch(e) {

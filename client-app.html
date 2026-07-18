@@ -43,6 +43,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-se
   <div class="wordmark">Ironclad</div>
   <div>
     <button class="tab-btn active" id="tabTraining" onclick="switchTab('training')">Training</button>
+    <button class="tab-btn" id="tabNutrition" onclick="switchTab('nutrition')">Nutrition</button>
     <button class="tab-btn" id="tabCheckin" onclick="switchTab('checkin')">Check-In</button>
     <button class="tab-btn" id="tabChat" onclick="switchTab('chat')">Coach Chat</button>
   </div>
@@ -56,6 +57,31 @@ body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-se
     <div class="card">
       <div class="section-label">Choose a Different Program</div>
       <div class="bundle-grid" id="bundleGrid"></div>
+    </div>
+  </div>
+  <div id="nutritionView" style="display:none">
+    <div class="card">
+      <div class="section-label">Log a Meal</div>
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">Meal</label>
+      <select id="nMealType" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;font-family:'Inter';font-size:13px;margin-bottom:12px">
+        <option value="Breakfast">Breakfast</option>
+        <option value="Lunch">Lunch</option>
+        <option value="Dinner">Dinner</option>
+        <option value="Snack">Snack</option>
+      </select>
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">What did you eat? (optional)</label>
+      <textarea id="nDescription" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;font-family:'Inter';font-size:13px;margin-bottom:12px;min-height:60px"></textarea>
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">How on-track did this feel?</label>
+      <div id="adherenceRow" style="display:flex;gap:6px;margin-bottom:14px">
+        <span class="adh" data-val="1" style="flex:1;text-align:center;padding:10px;border:1.5px solid var(--line);border-radius:8px;cursor:pointer;font-size:12px">Way Off</span>
+        <span class="adh" data-val="3" style="flex:1;text-align:center;padding:10px;border:1.5px solid var(--line);border-radius:8px;cursor:pointer;font-size:12px">Okay</span>
+        <span class="adh" data-val="5" style="flex:1;text-align:center;padding:10px;border:1.5px solid var(--line);border-radius:8px;cursor:pointer;font-size:12px">On Track</span>
+      </div>
+      <button class="btn-primary" onclick="submitNutrition()">Log Meal</button>
+    </div>
+    <div class="card">
+      <div class="section-label">Recent Meals</div>
+      <div id="nutritionHistory"></div>
     </div>
   </div>
   <div id="checkinView" style="display:none">
@@ -117,13 +143,57 @@ let SESSION = null, CURRENT_BUNDLE = null, ACTIVE_ROUTINE_IDX = null;
 
 function switchTab(tab){
   document.getElementById('trainingView').style.display = tab === 'training' ? 'block' : 'none';
+  document.getElementById('nutritionView').style.display = tab === 'nutrition' ? 'block' : 'none';
   document.getElementById('checkinView').style.display = tab === 'checkin' ? 'block' : 'none';
   document.getElementById('chatView').style.display = tab === 'chat' ? 'block' : 'none';
   document.getElementById('tabTraining').classList.toggle('active', tab === 'training');
+  document.getElementById('tabNutrition').classList.toggle('active', tab === 'nutrition');
   document.getElementById('tabCheckin').classList.toggle('active', tab === 'checkin');
   document.getElementById('tabChat').classList.toggle('active', tab === 'chat');
   if (tab === 'chat') loadChat();
   if (tab === 'checkin') loadCheckinHistory();
+  if (tab === 'nutrition') loadNutritionHistory();
+}
+
+let SELECTED_ADHERENCE = null;
+document.querySelectorAll('#adherenceRow .adh').forEach(el => {
+  el.onclick = () => {
+    SELECTED_ADHERENCE = el.dataset.val;
+    document.querySelectorAll('#adherenceRow .adh').forEach(x => { x.style.borderColor = 'var(--line)'; x.style.background = '#fff'; x.style.color = 'var(--ink)'; });
+    el.style.borderColor = 'var(--red)'; el.style.background = 'var(--red)'; el.style.color = '#fff';
+  };
+});
+
+async function submitNutrition(){
+  const meal_type = document.getElementById('nMealType').value;
+  const description = document.getElementById('nDescription').value.trim();
+  try {
+    const r = await fetch(WORKER + '/client/log-nutrition', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: SESSION.token, meal_type, description: description || null, adherence_rating: SELECTED_ADHERENCE })
+    });
+    const d = await r.json();
+    if (!d.ok) { alert(d.error || 'Could not log meal.'); return; }
+    document.getElementById('nDescription').value = '';
+    SELECTED_ADHERENCE = null;
+    document.querySelectorAll('#adherenceRow .adh').forEach(x => { x.style.borderColor = 'var(--line)'; x.style.background = '#fff'; x.style.color = 'var(--ink)'; });
+    loadNutritionHistory();
+  } catch(e) { alert('Connection error, try again.'); }
+}
+
+async function loadNutritionHistory(){
+  const el = document.getElementById('nutritionHistory');
+  try {
+    const r = await fetch(WORKER + '/client/nutrition-logs?token=' + encodeURIComponent(SESSION.token));
+    const d = await r.json();
+    const logs = d.logs || [];
+    if (!logs.length) { el.innerHTML = '<div class="empty">No meals logged yet.</div>'; return; }
+    el.innerHTML = logs.map(l => `
+      <div class="ex-row">
+        <div style="font-weight:600">${esc(l.meal_type)} — ${new Date(l.logged_at).toLocaleDateString()}</div>
+        ${l.description ? `<div style="color:var(--ink3);font-size:12px;margin-top:2px">${esc(l.description)}</div>` : ''}
+      </div>`).join('');
+  } catch(e) {}
 }
 
 async function submitCheckin(){
