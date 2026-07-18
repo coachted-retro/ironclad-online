@@ -107,7 +107,11 @@ export default {
            b.experience ? `Experience: ${b.experience}` : null, b.days_per_week ? `Availability: ${b.days_per_week}` : null,
            (b.parq_flags && b.parq_flags.length) ? `PAR-Q flags: ${b.parq_flags.join('; ')}` : null,
            b.injuries ? `Injuries: ${b.injuries}` : null, b.dietary ? `Dietary: ${b.dietary}` : null,
-           b.tried_before ? `Tried before: ${b.tried_before}` : null].filter(Boolean).join('\n'),
+           b.tried_before ? `Tried before: ${b.tried_before}` : null,
+           b.training_preference ? `Training preference: ${b.training_preference}` : null,
+           b.zip ? `Zip: ${b.zip}` : null,
+           (b.training_preference === 'in_person') ? `In-person eligible: ${b.in_person_eligible ? 'yes' : 'no'}` : null,
+           b.commitment_level ? `Commitment level: ${b.commitment_level}` : null].filter(Boolean).join('\n'),
           JSON.stringify({ answers: b }), now, now
         ).run();
         return ok({ id: insertRes.meta?.last_row_id, submitted: true }, cors);

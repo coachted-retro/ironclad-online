@@ -79,7 +79,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
 
 <div class="wrap">
   <form class="card" id="assessForm" onsubmit="submitAssessment(event)">
-    <div class="progress"><span class="done" data-dot="1"></span><span data-dot="2"></span><span data-dot="3"></span><span data-dot="4"></span></div>
+    <div class="progress"><span class="done" data-dot="1"></span><span data-dot="2"></span><span data-dot="3"></span><span data-dot="4"></span><span data-dot="5"></span></div>
 
     <div class="step" data-step="1">
       <div class="section-label">Your Info</div>
@@ -173,6 +173,17 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
         <div class="choice" data-val="home_gym">Home Gym<br><span style="font-weight:400;font-size:11px">Some equipment</span></div>
         <div class="choice" data-val="bodyweight" style="grid-column:1/3">Bodyweight Only</div>
       </div>
+
+      <div class="section-label">How Do You Prefer to Train? <span class="req">*</span></div>
+      <div class="choice-grid" id="prefChoices" style="margin-bottom:12px">
+        <div class="choice" data-val="in_person">In-Person<br><span style="font-weight:400;font-size:11px">With a coach at the gym</span></div>
+        <div class="choice" data-val="remote">Remote<br><span style="font-weight:400;font-size:11px">On my own, app-guided</span></div>
+      </div>
+      <div class="field" id="zipField" style="display:none;margin-bottom:16px">
+        <label>Zip Code</label>
+        <input type="text" id="fZip" inputmode="numeric" maxlength="5" placeholder="19030">
+        <div class="hint">In-person coaching is local to Ironclad Fitness at Retro Fitness Fairless Hills — this just confirms you're in range.</div>
+      </div>
       <div style="display:flex;gap:8px">
         <button type="button" class="submit-btn" style="background:#fff;color:var(--red);border:1.5px solid var(--red)" onclick="prevStep()">Back</button>
         <button type="button" class="submit-btn" onclick="nextStep()">Continue</button>
@@ -205,6 +216,21 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
       <div class="err" id="errBox"></div>
       <div style="display:flex;gap:8px">
         <button type="button" class="submit-btn" style="background:#fff;color:var(--red);border:1.5px solid var(--red)" onclick="prevStep()">Back</button>
+        <button type="button" class="submit-btn" onclick="nextStep()">Continue</button>
+      </div>
+    </div>
+
+    <div class="step" data-step="5" style="display:none">
+      <div class="section-label">Last Thing</div>
+      <div style="font-size:15px;font-weight:700;line-height:1.4;margin-bottom:16px">How ready are you to fully commit to reaching your goals?</div>
+      <div id="commitChoices" style="margin-bottom:16px">
+        <div class="choice" data-val="all_in" style="text-align:left;padding:14px;margin-bottom:8px;font-size:14px">🔥&nbsp; I'm all in — let's do this</div>
+        <div class="choice" data-val="serious" style="text-align:left;padding:14px;margin-bottom:8px;font-size:14px">💪&nbsp; I'm serious, but want to ease into it</div>
+        <div class="choice" data-val="exploring" style="text-align:left;padding:14px;font-size:14px">👀&nbsp; Just exploring for now</div>
+      </div>
+      <div class="err" id="errBox2"></div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="submit-btn" style="background:#fff;color:var(--red);border:1.5px solid var(--red)" onclick="prevStep()">Back</button>
         <button type="submit" class="submit-btn" id="submitBtn">Get My Plan</button>
       </div>
     </div>
@@ -234,16 +260,44 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
       <b>Founding Member Pricing</b> — the rate you lock in today is the rate you keep for as long as you stay subscribed, even after prices go up for new members. Most people already know what they want to change — the only thing standing between here and there is starting. The plan works whether you start today or six months from now; the only difference is which six months you get back.
     </div>
 
-    <div class="section-label" style="margin-top:4px">Choose Your Plan</div>
-    <a href="" id="ctaAdvantage" class="submit-btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;position:relative">
-      Start My Membership — Annual <span style="font-weight:400">($189/yr)</span>
-    </a>
-    <div class="hint" style="text-align:center;margin:2px 0 12px;color:var(--green);font-weight:700">Best value — 2 months free vs. paying monthly</div>
-    <a href="" id="ctaFlex" class="submit-btn secondary" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;background:#fff;color:var(--red);border:1.5px solid var(--red)">
-      Or Pay Monthly ($18.99/mo)
-    </a>
-    <div class="hint" style="text-align:center;margin:10px 0 4px;color:var(--green);font-weight:700">✓ 7-day money-back guarantee — not for you, full refund, no questions asked.</div>
-    <div class="hint" style="text-align:center;margin:0 0 14px">Cancel anytime. You'll get your login the moment payment goes through.</div>
+    <div id="onlinePlanSection">
+      <div class="section-label" style="margin-top:4px">Choose Your Plan</div>
+      <a href="" id="ctaAdvantage" class="submit-btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;position:relative">
+        Start My Membership — Annual <span style="font-weight:400">($189/yr)</span>
+      </a>
+      <div class="hint" style="text-align:center;margin:2px 0 12px;color:var(--green);font-weight:700">Best value — 2 months free vs. paying monthly</div>
+      <a href="" id="ctaFlex" class="submit-btn secondary" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;background:#fff;color:var(--red);border:1.5px solid var(--red)">
+        Or Pay Monthly ($18.99/mo)
+      </a>
+      <div class="hint" style="text-align:center;margin:10px 0 4px;color:var(--green);font-weight:700">✓ 7-day money-back guarantee — not for you, full refund, no questions asked.</div>
+      <div class="hint" style="text-align:center;margin:0 0 14px">Cancel anytime. You'll get your login the moment payment goes through.</div>
+    </div>
+
+    <div id="inPersonSection" style="display:none">
+      <div class="section-label" style="margin-top:4px">Your In-Person Package</div>
+      <div class="nutrition-note" style="border-left:3px solid var(--red)">
+        <b>Included with every in-person package:</b><br><br>
+        ✓ 1-on-1 coaching — real-time form, safety, and technique monitoring, every session<br>
+        ✓ Full Ultimate gym membership — unlimited access, group classes, tanning room, massage room<br>
+        ✓ Baseline InBody body composition scan — your true starting point, not just a number on a scale<br>
+        ✓ Monthly InBody re-scans, included at no extra cost — tracks real muscle and fat changes so your program adjusts to what's actually happening, not guesswork<br>
+        ✓ Monthly progress check-ins and nutrition/macro guidance, built around your goals
+      </div>
+      <div class="nutrition-note">
+        <b>Why the InBody scan matters:</b> A regular scale can't tell muscle from fat — it's entirely possible to gain muscle and lose fat at the same time and see the exact same number, which is exactly the kind of thing that makes people quit for the wrong reason. InBody uses a quick, painless, clinically-validated scan (about 60 seconds, nothing invasive) to show your actual muscle mass, fat mass, and water distribution — the real picture your coach uses to know if your program is working and adjust it before you plateau.
+      </div>
+      <div id="pricingTiers"></div>
+      <a href="" id="ctaInPerson" class="submit-btn" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box">
+        Book My Free Consultation
+      </a>
+      <div class="hint" style="text-align:center;margin:10px 0 4px">Membership and training billed directly by Retro Fitness Fairless Hills — not through Ironclad.</div>
+    </div>
+
+    <div id="outOfRangeSection" style="display:none">
+      <div class="nutrition-note" style="border-left:3px solid var(--amber, #B45309)">
+        <b>You're outside our in-person service area</b> — in-person coaching is local to Ironclad Fitness at Retro Fitness Fairless Hills, and your zip code is a bit further out than we can offer hands-on sessions. Good news: everything else — the training programs, nutrition guidance, and AI coaching — works exactly the same remotely, from anywhere.
+      </div>
+    </div>
 
     <div class="section-label">Questions</div>
     <div class="nutrition-note">
@@ -262,10 +316,25 @@ const WORKER = WORKER_URL;
 // > Add Button to Website), one per plan, each set to Exact amount +
 // recurring Frequency. Update here if either link is ever regenerated.
 const SQUARE_CHECKOUT_URL_ADVANTAGE = 'https://square.link/u/BKlatLgi';
+// TODO: confirm with Ted -- placeholder using the existing reschedule/
+// booking calendar link until he confirms the actual new-consultation
+// booking flow he wants in-person leads routed to.
+const IN_PERSON_BOOKING_URL = 'https://calendar.app.google/z6vifErwUYRPn1vFA';
 const SQUARE_CHECKOUT_URL_FLEX = 'https://square.link/u/NjTJtV70';
-let SELECTED = { goal: null, experience: null, days: null, sex: null, trend: null, equipment: null };
+let SELECTED = { goal: null, experience: null, days: null, sex: null, trend: null, equipment: null, trainPref: null, commit: null };
 let CURRENT_STEP = 1;
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
+
+// The whitelist for in-person eligibility -- straight-line/rough-drive
+// judgment centered on Ironclad Fitness at Retro Fitness Fairless Hills
+// (516 Lincoln Hwy, Fairless Hills, PA 19030), confirmed against Ted's
+// own sense of the service area rather than a raw mileage calculation.
+const IN_PERSON_ZIPS = new Set([
+  '19030','19067','19054','19055','19056','19057','19007','19047','19021',
+  '18940','19053','18977',
+  '08618','08628','08638','08560','08608','08609','08610','08648',
+  '08619','08620','08690','08691'
+]);
 
 function wireChoices(groupId, key) {
   document.querySelectorAll('#' + groupId + ' .choice').forEach(el => {
@@ -273,6 +342,9 @@ function wireChoices(groupId, key) {
       document.querySelectorAll('#' + groupId + ' .choice').forEach(x => x.classList.remove('selected'));
       el.classList.add('selected');
       SELECTED[key] = el.dataset.val;
+      if (groupId === 'prefChoices') {
+        document.getElementById('zipField').style.display = el.dataset.val === 'in_person' ? 'block' : 'none';
+      }
     };
   });
 }
@@ -282,6 +354,8 @@ wireChoices('daysChoices', 'days');
 wireChoices('sexChoices', 'sex');
 wireChoices('trendChoices', 'trend');
 wireChoices('equipChoices', 'equipment');
+wireChoices('prefChoices', 'trainPref');
+wireChoices('commitChoices', 'commit');
 
 function updateProgressDots(){
   document.querySelectorAll('.progress span').forEach((dot, i) => {
@@ -298,6 +372,19 @@ function validateStep(step){
     const phone = document.getElementById('fPhone').value.trim();
     if (!name) { alert('Please enter your name.'); return false; }
     if (!email && !phone) { alert('Please provide an email or phone number.'); return false; }
+  }
+  if (step === 3) {
+    if (!SELECTED.goal) { alert('Please select your goal.'); return false; }
+    if (!SELECTED.experience) { alert('Please select your experience level.'); return false; }
+    if (!SELECTED.days) { alert('Please select your available days.'); return false; }
+    if (!SELECTED.trainPref) { alert('Please select how you prefer to train.'); return false; }
+    if (SELECTED.trainPref === 'in_person') {
+      const zip = document.getElementById('fZip').value.trim();
+      if (!/^\d{5}$/.test(zip)) { alert('Please enter a valid 5-digit zip code.'); return false; }
+    }
+  }
+  if (step === 5) {
+    if (!SELECTED.commit) { alert('Please select one to continue.'); return false; }
   }
   return true;
 }
@@ -387,6 +474,8 @@ async function submitAssessment(e) {
   const heightFt = document.getElementById('fHeightFt').value;
   const heightIn = document.getElementById('fHeightIn').value;
   const parqFlags = Array.from(document.querySelectorAll('.parq:checked')).map(el => el.value);
+  const zip = document.getElementById('fZip').value.trim();
+  const inPersonEligible = SELECTED.trainPref === 'in_person' && IN_PERSON_ZIPS.has(zip);
   const payload = {
     first_name: nameParts[0],
     last_name: nameParts.slice(1).join(' ') || null,
@@ -406,6 +495,10 @@ async function submitAssessment(e) {
     injuries: document.getElementById('fInjuries').value.trim() || null,
     dietary: document.getElementById('fDietary').value.trim() || null,
     tried_before: document.getElementById('fTried').value.trim() || null,
+    training_preference: SELECTED.trainPref,
+    zip: zip || null,
+    in_person_eligible: inPersonEligible,
+    commitment_level: SELECTED.commit,
     recommended_bundle_id: recs[0] ? recs[0].id : null,
     recommended_bundle_name: recs.map(r => r.name).join(', ')
   };
@@ -436,8 +529,36 @@ async function submitAssessment(e) {
       `<b>Nutrition:</b> ${NUTRITION_NOTES[SELECTED.goal]}`;
     document.getElementById('supplementNote').innerHTML = buildSupplementNote();
 
-    document.getElementById('ctaAdvantage').href = SQUARE_CHECKOUT_URL_ADVANTAGE;
-    document.getElementById('ctaFlex').href = SQUARE_CHECKOUT_URL_FLEX;
+    document.getElementById('onlinePlanSection').style.display = 'none';
+    document.getElementById('inPersonSection').style.display = 'none';
+    document.getElementById('outOfRangeSection').style.display = 'none';
+
+    if (SELECTED.trainPref === 'in_person' && inPersonEligible) {
+      document.getElementById('inPersonSection').style.display = 'block';
+      const suggested = SELECTED.commit === 'all_in' ? '3' : SELECTED.commit === 'serious' ? '2' : '1';
+      const tiers = [
+        { freq: '1', label: '1x / week', sessions: '4 sessions/mo', price: '$219.99/mo' },
+        { freq: '2', label: '2x / week', sessions: '8 sessions/mo', price: '$399.99/mo' },
+        { freq: '3', label: '3x / week', sessions: '12 sessions/mo', price: '$579.99/mo' }
+      ];
+      document.getElementById('pricingTiers').innerHTML = tiers.map(t => `
+        <div class="rec-card" style="${t.freq===suggested ? 'border-top-color:var(--red);background:var(--red-lt)' : ''}">
+          ${t.freq===suggested ? '<div style="font-size:11px;font-weight:700;color:var(--red-dk);text-transform:uppercase;margin-bottom:4px">Recommended for you</div>' : ''}
+          <div class="rec-name">${t.label}</div>
+          <div class="rec-desc">${t.sessions} — full Ultimate membership + training, all-in</div>
+          <div class="rec-days" style="color:var(--red)">${t.price}</div>
+        </div>`).join('');
+      document.getElementById('ctaInPerson').href = IN_PERSON_BOOKING_URL;
+    } else if (SELECTED.trainPref === 'in_person' && !inPersonEligible) {
+      document.getElementById('outOfRangeSection').style.display = 'block';
+      document.getElementById('onlinePlanSection').style.display = 'block';
+      document.getElementById('ctaAdvantage').href = SQUARE_CHECKOUT_URL_ADVANTAGE;
+      document.getElementById('ctaFlex').href = SQUARE_CHECKOUT_URL_FLEX;
+    } else {
+      document.getElementById('onlinePlanSection').style.display = 'block';
+      document.getElementById('ctaAdvantage').href = SQUARE_CHECKOUT_URL_ADVANTAGE;
+      document.getElementById('ctaFlex').href = SQUARE_CHECKOUT_URL_FLEX;
+    }
 
     document.getElementById('assessForm').style.display = 'none';
     document.getElementById('resultsCard').style.display = 'block';
