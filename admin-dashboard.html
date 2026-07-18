@@ -65,6 +65,7 @@ async function loadClients(){
         <div>
           <div class="client-name">${esc(c.first_name)} ${esc(c.last_name || '')}</div>
           <div class="client-meta">${esc(c.goal_primary || 'No goal set')}${c.email ? ' · ' + esc(c.email) : ''}${c.subscription_plan ? ' · ' + esc(c.subscription_plan) : ''}</div>
+          <div class="client-meta">${c.last_checkin ? 'Last check-in: ' + new Date(c.last_checkin).toLocaleDateString() : 'No check-ins yet'}</div>
         </div>
         <div class="status-pill ${statusClass}">${esc(c.status)}</div>
       </div>`;

@@ -43,6 +43,7 @@ body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-se
   <div class="wordmark">Ironclad</div>
   <div>
     <button class="tab-btn active" id="tabTraining" onclick="switchTab('training')">Training</button>
+    <button class="tab-btn" id="tabCheckin" onclick="switchTab('checkin')">Check-In</button>
     <button class="tab-btn" id="tabChat" onclick="switchTab('chat')">Coach Chat</button>
   </div>
 </div>
@@ -55,6 +56,25 @@ body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-se
     <div class="card">
       <div class="section-label">Choose a Different Program</div>
       <div class="bundle-grid" id="bundleGrid"></div>
+    </div>
+  </div>
+  <div id="checkinView" style="display:none">
+    <div class="card">
+      <div class="section-label">Weekly Check-In</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin-bottom:14px">A quick weekly update so your coach can actually track how things are going — separate from your monthly live call.</div>
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">How did training go this week?</label>
+      <textarea id="ciTraining" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;font-family:'Inter';font-size:13px;margin-bottom:12px;min-height:60px"></textarea>
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">Any soreness or pain?</label>
+      <textarea id="ciSoreness" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;font-family:'Inter';font-size:13px;margin-bottom:12px;min-height:50px"></textarea>
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">How was your nutrition adherence?</label>
+      <textarea id="ciNutrition" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;font-family:'Inter';font-size:13px;margin-bottom:12px;min-height:50px"></textarea>
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">Questions for your coach?</label>
+      <textarea id="ciQuestions" style="width:100%;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;font-family:'Inter';font-size:13px;margin-bottom:12px;min-height:50px"></textarea>
+      <button class="btn-primary" onclick="submitCheckin()">Submit Check-In</button>
+    </div>
+    <div class="card">
+      <div class="section-label">Past Check-Ins</div>
+      <div id="checkinHistory"></div>
     </div>
   </div>
   <div id="chatView" style="display:none">
@@ -82,10 +102,50 @@ let SESSION = null, CURRENT_BUNDLE = null, ACTIVE_ROUTINE_IDX = null;
 
 function switchTab(tab){
   document.getElementById('trainingView').style.display = tab === 'training' ? 'block' : 'none';
+  document.getElementById('checkinView').style.display = tab === 'checkin' ? 'block' : 'none';
   document.getElementById('chatView').style.display = tab === 'chat' ? 'block' : 'none';
   document.getElementById('tabTraining').classList.toggle('active', tab === 'training');
+  document.getElementById('tabCheckin').classList.toggle('active', tab === 'checkin');
   document.getElementById('tabChat').classList.toggle('active', tab === 'chat');
   if (tab === 'chat') loadChat();
+  if (tab === 'checkin') loadCheckinHistory();
+}
+
+async function submitCheckin(){
+  const training_review = document.getElementById('ciTraining').value.trim();
+  const soreness_pain = document.getElementById('ciSoreness').value.trim();
+  const nutrition_adherence = document.getElementById('ciNutrition').value.trim();
+  const questions = document.getElementById('ciQuestions').value.trim();
+  if (!training_review && !soreness_pain && !nutrition_adherence && !questions) { alert('Fill in at least one field before submitting.'); return; }
+  try {
+    const r = await fetch(WORKER + '/client/weekly-checkin', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: SESSION.token, training_review, soreness_pain, nutrition_adherence, questions })
+    });
+    const d = await r.json();
+    if (!d.ok) { alert(d.error || 'Could not submit check-in.'); return; }
+    document.getElementById('ciTraining').value = '';
+    document.getElementById('ciSoreness').value = '';
+    document.getElementById('ciNutrition').value = '';
+    document.getElementById('ciQuestions').value = '';
+    alert('Check-in submitted — your coach will follow up if needed.');
+    loadCheckinHistory();
+  } catch(e) { alert('Connection error, try again.'); }
+}
+
+async function loadCheckinHistory(){
+  const el = document.getElementById('checkinHistory');
+  try {
+    const r = await fetch(WORKER + '/client/weekly-checkins?token=' + encodeURIComponent(SESSION.token));
+    const d = await r.json();
+    const checkins = d.checkins || [];
+    if (!checkins.length) { el.innerHTML = '<div class="empty">No check-ins submitted yet.</div>'; return; }
+    el.innerHTML = checkins.map(c => `
+      <div class="ex-row">
+        <div style="font-weight:600">${new Date(c.submitted_at).toLocaleDateString()}</div>
+        ${c.training_review ? `<div style="color:var(--ink3);font-size:12px;margin-top:2px">Training: ${esc(c.training_review)}</div>` : ''}
+      </div>`).join('');
+  } catch(e) {}
 }
 
 async function loadMe(){

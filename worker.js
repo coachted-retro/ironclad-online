@@ -229,7 +229,10 @@ export default {
         if (!env.DB) return bad('No DB', cors);
         const claims = await verifyToken(url.searchParams.get('token'), SECRET);
         if (!claims || claims.role !== 'admin') return bad('Unauthorized', cors);
-        const rows = await env.DB.prepare('SELECT * FROM clients ORDER BY created_at DESC').all();
+        const rows = await env.DB.prepare(`
+          SELECT c.*, (SELECT MAX(submitted_at) FROM weekly_checkins WHERE client_id=c.id) as last_checkin
+          FROM clients c ORDER BY c.created_at DESC
+        `).all();
         return ok({ clients: rows.results || [] }, cors);
       }
 
@@ -292,6 +295,29 @@ export default {
         const client = await env.DB.prepare('SELECT * FROM clients WHERE id=?').bind(claims.id).first();
         ctx.waitUntil(generateAICoachMessage(env, client, { log_date: logDate, routine_label: routineLabel }));
         return ok({ logged: true }, cors);
+      }
+
+      // ── WEEKLY CHECK-IN (Remote Coaching accountability cadence) ──
+      // Async, client-submitted -- the weekly half of the check-in
+      // structure. The monthly half is a live call booked through Ted's
+      // own Google Calendar link, outside this system entirely.
+      if (url.pathname === '/client/weekly-checkin' && request.method === 'POST') {
+        if (!env.DB) return bad('No DB', cors);
+        const b = await request.json().catch(() => ({}));
+        const claims = await verifyToken(b.token, SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        await env.DB.prepare(
+          `INSERT INTO weekly_checkins (client_id,training_review,soreness_pain,nutrition_adherence,questions) VALUES (?,?,?,?,?)`
+        ).bind(claims.id, b.training_review || null, b.soreness_pain || null, b.nutrition_adherence || null, b.questions || null).run();
+        return ok({ submitted: true }, cors);
+      }
+
+      if (url.pathname === '/client/weekly-checkins' && request.method === 'GET') {
+        if (!env.DB) return bad('No DB', cors);
+        const claims = await verifyToken(url.searchParams.get('token'), SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        const rows = await env.DB.prepare('SELECT * FROM weekly_checkins WHERE client_id=? ORDER BY submitted_at DESC LIMIT 12').bind(claims.id).all();
+        return ok({ checkins: rows.results || [] }, cors);
       }
 
       // ── PORTAL MESSAGES (client <-> AI coach / Ted) ────────────
