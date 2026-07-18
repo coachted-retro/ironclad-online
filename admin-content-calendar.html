@@ -35,7 +35,7 @@ h1{font-family:'Oswald';font-size:20px;font-weight:700;text-transform:uppercase;
 <div class="wrap">
   <a href="admin-dashboard.html" class="back-link">&larr; Back to Online Clients</a>
   <h1>Content Calendar</h1>
-  <div class="sub">Five posts a week — Mon/Tue/Wed/Fri/Sat, two rest days so it never reads as bombarding. Repeats as a 4-week cycle; swap in real talking-head or gym-floor video for the tagged slots as you film them. Check off as you post.</div>
+  <div class="sub">Five posts a week — Mon/Tue/Wed/Fri/Sat, two rest days so it never reads as bombarding. Repeats as a 4-week cycle; swap in real talking-head or gym-floor video for the tagged slots as you film them. Check off as you post.<br><br>3 of 4 Tuesday posts (marked "Education + 1st Phorm") double as affiliate content — natural nutrition tie-ins only, always disclosed with #ad. Week 3's Tuesday stays Ironclad-only since it's about coaching philosophy, not nutrition — didn't force a supplement mention where it wasn't a genuine fit.</div>
   <div id="calendarBody"></div>
 </div>
 <script>
@@ -52,14 +52,14 @@ let SESSION = null;
 const CALENDAR = [
   { week: 1, posts: [
     { day: 'Monday — Motivation', type: '📱 Static post / graphic', caption: "You already know what you want to change. The only thing standing between here and there is starting. Quick 2-minute assessment → your exact plan, matched to your goals. No guessing, no generic templates. Link in bio." },
-    { day: 'Tuesday — Education', type: '🎥 Talking-head video', caption: "Most diets fail for one reason: they treat every calorie the same. Protein, carbs, and fat each do a completely different job — get that balance wrong and it doesn't matter how hard you train. Free 2-minute quiz, link in bio." },
+    { day: 'Tuesday — Education + 1st Phorm', type: '🎥 Talking-head video', caption: "Most diets fail for one reason: they treat every calorie the same. Protein, carbs, and fat each do a completely different job — get that balance wrong and it doesn't matter how hard you train. Hitting your protein target through food alone is tough for most people — it's exactly why I personally use 1st Phorm to fill the gap (affiliate link in bio, #ad). Want the full picture on your training and nutrition? Free 2-minute Ironclad quiz, also in bio." },
     { day: 'Wednesday — Program Spotlight', type: '🏋️ Gym floor video', caption: "This is Iron Protocol — the program our most advanced lifters run. 5 days a week, real weight, real results. Free quiz matches you to your own version. Link in bio." },
     { day: 'Friday — Coach Story', type: '🏋️ Gym floor / behind-the-scenes video', caption: "15+ years in fitness, a former MMA athlete, and 15 years running a restaurant taught me one thing: most people fail not from lack of effort, but from following the wrong plan for their body and goals. Built a system to fix that. Free assessment, link in bio. 💪" },
     { day: 'Saturday — Quiz Push', type: '📱 Static post / graphic', caption: "Have you ever wondered why every other diet and exercise program failed you? Take my quick 2-minute quiz to find out why — link in bio. 💪" },
   ]},
   { week: 2, posts: [
     { day: 'Monday — Motivation', type: '📱 Static post / graphic', caption: "Building something real here — a complete training + nutrition system, beginner to advanced, with an actual coach behind it (that's me 👋). Take the free assessment and be one of the first to try it. Link in bio." },
-    { day: 'Tuesday — Education', type: '🎥 Talking-head video', caption: "Most people quit for the wrong reason — the scale doesn't move, so they think nothing's working. Truth is, muscle and fat can trade places and the number stays exactly the same. That's why real body composition tracking matters more than a bathroom scale. Free quiz, link in bio." },
+    { day: 'Tuesday — Education + 1st Phorm', type: '🎥 Talking-head video', caption: "Most people quit for the wrong reason — the scale doesn't move, so they think nothing's working. Truth is, muscle and fat can trade places and the number stays exactly the same. Real body composition tracking (and real recovery — protein intake included) matters more than the scale. 1st Phorm is what I personally use to stay on top of my own protein intake (affiliate link in bio, #ad). Free Ironclad quiz to see your own plan, also in bio." },
     { day: 'Wednesday — Program Spotlight', type: '🏋️ Gym floor video', caption: "True Tabata — 20 seconds max effort, 10 seconds rest, 8 rounds, exactly 4 brutal minutes. Not the watered-down 'Tabata-style' circuit everyone else calls it. Free quiz matches you to the right program. Link in bio." },
     { day: 'Friday — Coach Story', type: '🎥 Talking-head video', caption: "Quick question: do you actually know what training split fits YOUR goal, or are you just doing what everyone else in the gym is doing? Quick 2-minute assessment tells you exactly what to run — beginner through advanced, nutrition included. Link in bio. 🎯" },
     { day: 'Saturday — Quiz Push', type: '📱 Static post / graphic', caption: "Not sure where to start? Take our quick 2-minute assessment and get matched with a real training program — beginner to advanced — plus nutrition guidance built around your actual goals. No generic templates. Link in bio. 💪" },
@@ -73,7 +73,7 @@ const CALENDAR = [
   ]},
   { week: 4, posts: [
     { day: 'Monday — Motivation', type: '📱 Static post / graphic', caption: "Confidence isn't something you wait to feel before you start — it's what shows up after you do. Free 2-minute quiz gets you moving. Link in bio." },
-    { day: 'Tuesday — Education', type: '🎥 Talking-head video', caption: "You don't need to cut carbs to lose fat. You need the right amount of protein, carbs, and fat for YOUR goal. That's the whole difference between a real plan and a generic diet app. Free quiz, link in bio." },
+    { day: 'Tuesday — Education + 1st Phorm', type: '🎥 Talking-head video', caption: "You don't need to cut carbs to lose fat. You need the right amount of protein, carbs, and fat for YOUR goal. That's the whole difference between a real plan and a generic diet app. Hitting the right numbers is a lot easier with the right tools — 1st Phorm is what I personally use to stay dialed in (affiliate link in bio, #ad). Free Ironclad quiz, also in bio." },
     { day: 'Wednesday — Program Spotlight', type: '🏋️ Gym floor video', caption: "Full-body supersets, HIIT finishers, built for fat loss without losing the muscle you've worked for. Free quiz matches your goal to the right plan. Link in bio." },
     { day: 'Friday — Coach Story', type: '🎥 Talking-head video', caption: "Fire & Life Safety Specialist by day, your coach the rest of the time. Same discipline either way. Free quiz, link in bio." },
     { day: 'Saturday — Quiz Push', type: '📱 Static post / graphic', caption: "Take the quiz. Get your plan. See what changes. Link in bio." },
