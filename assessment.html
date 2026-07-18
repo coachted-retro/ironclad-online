@@ -79,59 +79,135 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
 
 <div class="wrap">
   <form class="card" id="assessForm" onsubmit="submitAssessment(event)">
-    <div class="progress"><span class="done"></span><span></span><span></span></div>
+    <div class="progress"><span class="done" data-dot="1"></span><span data-dot="2"></span><span data-dot="3"></span><span data-dot="4"></span></div>
 
-    <div class="section-label">Your Info</div>
-    <div class="field">
-      <label>Full Name <span class="req">*</span></label>
-      <input type="text" id="fName" required autocomplete="name">
-    </div>
-    <div class="field-row">
+    <div class="step" data-step="1">
+      <div class="section-label">Your Info</div>
       <div class="field">
-        <label>Email</label>
-        <input type="email" id="fEmail" autocomplete="email">
+        <label>Full Name <span class="req">*</span></label>
+        <input type="text" id="fName" required autocomplete="name">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="fEmail" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="tel" id="fPhone" autocomplete="tel">
+        </div>
+      </div>
+      <div class="hint" style="margin:-6px 0 14px">Give us at least one way to send you your results.</div>
+      <button type="button" class="submit-btn" onclick="nextStep()">Continue</button>
+    </div>
+
+    <div class="step" data-step="2" style="display:none">
+      <div class="section-label">Body Basics <span class="req">*</span></div>
+      <div class="hint" style="margin:-6px 0 14px">No InBody scan needed — this is what lets us actually calculate your nutrition baseline instead of guessing.</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Age</label>
+          <input type="number" id="fAge" min="13" max="100" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label>Weight (lbs)</label>
+          <input type="number" id="fWeight" min="60" max="600" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Height (ft)</label>
+          <input type="number" id="fHeightFt" min="3" max="8" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label>Height (in)</label>
+          <input type="number" id="fHeightIn" min="0" max="11" inputmode="numeric">
+        </div>
+      </div>
+      <div class="section-label">Biological Sex</div>
+      <div class="hint" style="margin:-6px 0 10px">Used only to calculate nutrition baselines accurately — sex affects calorie and macro math.</div>
+      <div class="choice-grid" id="sexChoices" style="margin-bottom:16px">
+        <div class="choice" data-val="male">Male</div>
+        <div class="choice" data-val="female">Female</div>
+        <div class="choice" data-val="unspecified" style="grid-column:1/3">Prefer Not to Say</div>
+      </div>
+      <div class="section-label">Recent Weight Trend</div>
+      <div class="choice-grid" id="trendChoices" style="margin-bottom:16px">
+        <div class="choice" data-val="losing">Losing</div>
+        <div class="choice" data-val="gaining">Gaining</div>
+        <div class="choice" data-val="stable">Stable</div>
+        <div class="choice" data-val="unsure">Not Sure</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="submit-btn" style="background:#fff;color:var(--red);border:1.5px solid var(--red)" onclick="prevStep()">Back</button>
+        <button type="button" class="submit-btn" onclick="nextStep()">Continue</button>
+      </div>
+    </div>
+
+    <div class="step" data-step="3" style="display:none">
+      <div class="section-label">Your Goal <span class="req">*</span></div>
+      <div class="choice-grid" id="goalChoices" style="margin-bottom:16px">
+        <div class="choice" data-val="build">Build Muscle</div>
+        <div class="choice" data-val="cut">Lose Fat</div>
+        <div class="choice" data-val="strength">Get Stronger</div>
+        <div class="choice" data-val="general">General Fitness</div>
+      </div>
+
+      <div class="section-label">Experience Level <span class="req">*</span></div>
+      <div class="choice-grid" id="expChoices" style="margin-bottom:16px">
+        <div class="choice" data-val="beginner">Beginner<br><span style="font-weight:400;font-size:11px">New or &lt;6 months</span></div>
+        <div class="choice" data-val="intermediate">Intermediate<br><span style="font-weight:400;font-size:11px">6mo&ndash;2 years</span></div>
+        <div class="choice" data-val="advanced" style="grid-column:1/3">Advanced<br><span style="font-weight:400;font-size:11px">2+ years, training seriously</span></div>
+      </div>
+
+      <div class="section-label">Days Per Week Available <span class="req">*</span></div>
+      <div class="choice-grid" id="daysChoices" style="margin-bottom:16px">
+        <div class="choice" data-val="2">2&ndash;3 Days</div>
+        <div class="choice" data-val="4">3&ndash;4 Days</div>
+        <div class="choice" data-val="5" style="grid-column:1/3">5+ Days</div>
+      </div>
+
+      <div class="section-label">Equipment Access</div>
+      <div class="choice-grid" id="equipChoices" style="margin-bottom:16px">
+        <div class="choice" data-val="full_gym">Full Gym</div>
+        <div class="choice" data-val="home_gym">Home Gym<br><span style="font-weight:400;font-size:11px">Some equipment</span></div>
+        <div class="choice" data-val="bodyweight" style="grid-column:1/3">Bodyweight Only</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="submit-btn" style="background:#fff;color:var(--red);border:1.5px solid var(--red)" onclick="prevStep()">Back</button>
+        <button type="button" class="submit-btn" onclick="nextStep()">Continue</button>
+      </div>
+    </div>
+
+    <div class="step" data-step="4" style="display:none">
+      <div class="section-label">Health Check</div>
+      <div class="hint" style="margin:-6px 0 10px">Standard pre-exercise screening — check anything that applies. This helps your coach keep you safe, not disqualify you.</div>
+      <div class="field" style="margin-bottom:16px">
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;text-transform:none;font-size:13px;color:var(--ink);margin-bottom:8px"><input type="checkbox" class="parq" value="Heart condition or chest pain" style="margin-top:3px"> Heart condition or chest pain</label>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;text-transform:none;font-size:13px;color:var(--ink);margin-bottom:8px"><input type="checkbox" class="parq" value="High blood pressure" style="margin-top:3px"> High blood pressure</label>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;text-transform:none;font-size:13px;color:var(--ink);margin-bottom:8px"><input type="checkbox" class="parq" value="Joint, bone, or muscle problem that could worsen with exercise" style="margin-top:3px"> Joint/bone/muscle problem that could worsen with exercise</label>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;text-transform:none;font-size:13px;color:var(--ink);margin-bottom:8px"><input type="checkbox" class="parq" value="Currently pregnant or recently gave birth" style="margin-top:3px"> Currently pregnant or recently gave birth</label>
+        <label style="display:flex;align-items:flex-start;gap:8px;font-weight:400;text-transform:none;font-size:13px;color:var(--ink)"><input type="checkbox" class="parq" value="Taking medication affecting heart rate or exercise response" style="margin-top:3px"> Taking medication that affects heart rate or exercise response</label>
       </div>
       <div class="field">
-        <label>Phone</label>
-        <input type="tel" id="fPhone" autocomplete="tel">
+        <label>Injuries or Physical Limitations</label>
+        <textarea id="fInjuries" placeholder="e.g. bad knee, lower back issues — or leave blank"></textarea>
+      </div>
+      <div class="field">
+        <label>Dietary Restrictions or Preferences</label>
+        <textarea id="fDietary" placeholder="e.g. vegetarian, gluten-free — or leave blank"></textarea>
+      </div>
+      <div class="field">
+        <label>What Have You Tried Before?</label>
+        <textarea id="fTried" placeholder="Other programs, diets, apps — what didn't work? (optional)"></textarea>
+      </div>
+
+      <div class="err" id="errBox"></div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="submit-btn" style="background:#fff;color:var(--red);border:1.5px solid var(--red)" onclick="prevStep()">Back</button>
+        <button type="submit" class="submit-btn" id="submitBtn">Get My Plan</button>
       </div>
     </div>
-    <div class="hint" style="margin:-6px 0 14px">Give us at least one way to send you your results.</div>
-
-    <div class="section-label">Your Goal <span class="req">*</span></div>
-    <div class="choice-grid" id="goalChoices" style="margin-bottom:16px">
-      <div class="choice" data-val="build">Build Muscle</div>
-      <div class="choice" data-val="cut">Lose Fat</div>
-      <div class="choice" data-val="strength">Get Stronger</div>
-      <div class="choice" data-val="general">General Fitness</div>
-    </div>
-
-    <div class="section-label">Experience Level <span class="req">*</span></div>
-    <div class="choice-grid" id="expChoices" style="margin-bottom:16px">
-      <div class="choice" data-val="beginner">Beginner<br><span style="font-weight:400;font-size:11px">New or &lt;6 months</span></div>
-      <div class="choice" data-val="intermediate">Intermediate<br><span style="font-weight:400;font-size:11px">6mo&ndash;2 years</span></div>
-      <div class="choice" data-val="advanced" style="grid-column:1/3">Advanced<br><span style="font-weight:400;font-size:11px">2+ years, training seriously</span></div>
-    </div>
-
-    <div class="section-label">Days Per Week Available <span class="req">*</span></div>
-    <div class="choice-grid" id="daysChoices" style="margin-bottom:16px">
-      <div class="choice" data-val="2">2&ndash;3 Days</div>
-      <div class="choice" data-val="4">3&ndash;4 Days</div>
-      <div class="choice" data-val="5" style="grid-column:1/3">5+ Days</div>
-    </div>
-
-    <div class="section-label">Anything We Should Know</div>
-    <div class="field">
-      <label>Injuries or Physical Limitations</label>
-      <textarea id="fInjuries" placeholder="e.g. bad knee, lower back issues — or leave blank"></textarea>
-    </div>
-    <div class="field">
-      <label>Dietary Restrictions or Preferences</label>
-      <textarea id="fDietary" placeholder="e.g. vegetarian, gluten-free — or leave blank"></textarea>
-    </div>
-
-    <div class="err" id="errBox"></div>
-    <button type="submit" class="submit-btn" id="submitBtn">Get My Plan</button>
     <div class="footer-badge">Powered by <b>Ironclad</b></div>
   </form>
 
@@ -140,6 +216,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5}
     <h2>Your Plan Is Ready</h2>
     <div class="sub" id="resultsSub"></div>
     <div id="recList"></div>
+    <div class="nutrition-note" id="parqNote" style="display:none;background:#FEF3C7;border:1px solid #F5D98A"></div>
     <div class="nutrition-note" id="macrosNote" style="border-left:3px solid var(--red)"></div>
     <div class="nutrition-note" id="outlookNote"></div>
     <div class="nutrition-note" id="nutritionNote"></div>
@@ -186,7 +263,9 @@ const WORKER = WORKER_URL;
 // recurring Frequency. Update here if either link is ever regenerated.
 const SQUARE_CHECKOUT_URL_ADVANTAGE = 'https://square.link/u/BKlatLgi';
 const SQUARE_CHECKOUT_URL_FLEX = 'https://square.link/u/NjTJtV70';
-let SELECTED = { goal: null, experience: null, days: null };
+let SELECTED = { goal: null, experience: null, days: null, sex: null, trend: null, equipment: null };
+let CURRENT_STEP = 1;
+const TOTAL_STEPS = 4;
 
 function wireChoices(groupId, key) {
   document.querySelectorAll('#' + groupId + ' .choice').forEach(el => {
@@ -200,6 +279,43 @@ function wireChoices(groupId, key) {
 wireChoices('goalChoices', 'goal');
 wireChoices('expChoices', 'experience');
 wireChoices('daysChoices', 'days');
+wireChoices('sexChoices', 'sex');
+wireChoices('trendChoices', 'trend');
+wireChoices('equipChoices', 'equipment');
+
+function updateProgressDots(){
+  document.querySelectorAll('.progress span').forEach((dot, i) => {
+    dot.classList.toggle('done', i < CURRENT_STEP);
+  });
+}
+
+function validateStep(step){
+  const errEl = document.getElementById('errBox');
+  if (errEl) errEl.style.display = 'none';
+  if (step === 1) {
+    const name = document.getElementById('fName').value.trim();
+    const email = document.getElementById('fEmail').value.trim();
+    const phone = document.getElementById('fPhone').value.trim();
+    if (!name) { alert('Please enter your name.'); return false; }
+    if (!email && !phone) { alert('Please provide an email or phone number.'); return false; }
+  }
+  return true;
+}
+
+function nextStep(){
+  if (!validateStep(CURRENT_STEP)) return;
+  document.querySelector('.step[data-step="'+CURRENT_STEP+'"]').style.display = 'none';
+  CURRENT_STEP++;
+  document.querySelector('.step[data-step="'+CURRENT_STEP+'"]').style.display = 'block';
+  updateProgressDots();
+  window.scrollTo({top: document.querySelector('.card').offsetTop - 20, behavior:'smooth'});
+}
+function prevStep(){
+  document.querySelector('.step[data-step="'+CURRENT_STEP+'"]').style.display = 'none';
+  CURRENT_STEP--;
+  document.querySelector('.step[data-step="'+CURRENT_STEP+'"]').style.display = 'block';
+  updateProgressDots();
+}
 
 const GOAL_LABELS = { build: 'Build Muscle', cut: 'Lose Fat', strength: 'Get Stronger', general: 'General Fitness' };
 const DAYS_LABELS = { '2': '2-3 days/week', '4': '3-4 days/week', '5': '5+ days/week' };
@@ -268,6 +384,9 @@ async function submitAssessment(e) {
 
   const recs = recommendBundles();
   const nameParts = name.split(/\s+/);
+  const heightFt = document.getElementById('fHeightFt').value;
+  const heightIn = document.getElementById('fHeightIn').value;
+  const parqFlags = Array.from(document.querySelectorAll('.parq:checked')).map(el => el.value);
   const payload = {
     first_name: nameParts[0],
     last_name: nameParts.slice(1).join(' ') || null,
@@ -277,8 +396,16 @@ async function submitAssessment(e) {
     experience: SELECTED.experience,
     days_per_week: DAYS_LABELS[SELECTED.days],
     sessions_per_week: parseInt(SELECTED.days, 10),
+    age: document.getElementById('fAge').value || null,
+    weight_lbs: document.getElementById('fWeight').value || null,
+    height: (heightFt || heightIn) ? `${heightFt||0}'${heightIn||0}"` : null,
+    sex: SELECTED.sex || null,
+    weight_trend: SELECTED.trend || null,
+    equipment_access: SELECTED.equipment || null,
+    parq_flags: parqFlags,
     injuries: document.getElementById('fInjuries').value.trim() || null,
     dietary: document.getElementById('fDietary').value.trim() || null,
+    tried_before: document.getElementById('fTried').value.trim() || null,
     recommended_bundle_id: recs[0] ? recs[0].id : null,
     recommended_bundle_name: recs.map(r => r.name).join(', ')
   };
@@ -299,6 +426,10 @@ async function submitAssessment(e) {
         <div class="rec-desc">${b.desc}</div>
         <div class="rec-days" style="color:${b.accent}">${b.days}</div>
       </div>`).join('');
+    if (payload.parq_flags && payload.parq_flags.length) {
+      document.getElementById('parqNote').style.display = 'block';
+      document.getElementById('parqNote').innerHTML = '<b>⚠ Before you start:</b> Based on what you shared, we\'d recommend a quick check with your doctor before beginning a new training program — nothing to worry about, just standard practice. Your coach will also follow up directly.';
+    }
     document.getElementById('macrosNote').innerHTML = buildMacrosNote();
     document.getElementById('outlookNote').innerHTML = buildOutlook(SELECTED.goal, SELECTED.experience);
     document.getElementById('nutritionNote').innerHTML =

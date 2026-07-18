@@ -101,8 +101,13 @@ export default {
           `INSERT INTO clients (first_name,last_name,email,phone,status,goal_primary,notes,onboarding_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`
         ).bind(
           firstName, b.last_name || null, b.email || null, b.phone || null, 'prospect', b.goal_primary || null,
-          [b.experience ? `Experience: ${b.experience}` : null, b.days_per_week ? `Availability: ${b.days_per_week}` : null,
-           b.injuries ? `Injuries: ${b.injuries}` : null, b.dietary ? `Dietary: ${b.dietary}` : null].filter(Boolean).join('\n'),
+          [b.age ? `Age: ${b.age}` : null, b.sex ? `Sex: ${b.sex}` : null, b.height ? `Height: ${b.height}` : null,
+           b.weight_lbs ? `Weight: ${b.weight_lbs} lbs` : null, b.weight_trend ? `Weight trend: ${b.weight_trend}` : null,
+           b.equipment_access ? `Equipment: ${b.equipment_access}` : null,
+           b.experience ? `Experience: ${b.experience}` : null, b.days_per_week ? `Availability: ${b.days_per_week}` : null,
+           (b.parq_flags && b.parq_flags.length) ? `PAR-Q flags: ${b.parq_flags.join('; ')}` : null,
+           b.injuries ? `Injuries: ${b.injuries}` : null, b.dietary ? `Dietary: ${b.dietary}` : null,
+           b.tried_before ? `Tried before: ${b.tried_before}` : null].filter(Boolean).join('\n'),
           JSON.stringify({ answers: b }), now, now
         ).run();
         return ok({ id: insertRes.meta?.last_row_id, submitted: true }, cors);
