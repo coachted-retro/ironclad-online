@@ -66,7 +66,7 @@ async function loadClients(){
     listEl.innerHTML = clients.map(c => {
       const statusClass = c.status === 'active' ? 'status-active' : c.status === 'prospect' ? 'status-prospect' : 'status-other';
       return `
-      <div class="client-card">
+      <div class="client-card" onclick="location.href='admin-client-detail.html?id=${c.id}'" style="cursor:pointer">
         <div>
           <div class="client-name">${esc(c.first_name)} ${esc(c.last_name || '')}</div>
           <div class="client-meta">${esc(c.goal_primary || 'No goal set')}${c.email ? ' · ' + esc(c.email) : ''}${c.subscription_plan ? ' · ' + esc(c.subscription_plan) : ''}</div>

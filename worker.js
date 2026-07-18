@@ -399,6 +399,33 @@ export default {
         return ok({ clients: rows.results || [] }, cors);
       }
 
+      // Full drill-down for one online client -- assessment answers, current
+      // program, workout history, weekly check-ins, and any reviews they've
+      // submitted, all in one place instead of five separate lookups.
+      if (url.pathname === '/admin/client-detail' && request.method === 'GET') {
+        if (!env.DB) return bad('No DB', cors);
+        const claims = await verifyToken(url.searchParams.get('token'), SECRET);
+        if (!claims || claims.role !== 'admin') return bad('Unauthorized', cors);
+        const clientId = parseInt(url.searchParams.get('client_id'), 10);
+        if (!clientId) return bad('client_id required', cors);
+        const client = await env.DB.prepare('SELECT * FROM clients WHERE id=?').bind(clientId).first();
+        if (!client) return bad('Client not found', cors);
+        const [program, workouts, checkins, reviews, messages] = await Promise.all([
+          env.DB.prepare('SELECT * FROM client_programs WHERE client_id=? AND active=1 ORDER BY selected_at DESC LIMIT 1').bind(clientId).first(),
+          env.DB.prepare('SELECT * FROM workout_logs WHERE client_id=? ORDER BY log_date DESC LIMIT 20').bind(clientId).all(),
+          env.DB.prepare('SELECT * FROM weekly_checkins WHERE client_id=? ORDER BY submitted_at DESC LIMIT 12').bind(clientId).all(),
+          env.DB.prepare('SELECT * FROM reviews WHERE client_id=? ORDER BY created_at DESC').bind(clientId).all(),
+          env.DB.prepare('SELECT * FROM portal_messages WHERE client_id=? ORDER BY created_at DESC LIMIT 20').bind(clientId).all()
+        ]);
+        let onboarding = null;
+        try { onboarding = client.onboarding_json ? JSON.parse(client.onboarding_json).answers : null; } catch (e) {}
+        return ok({
+          client, onboarding, program: program || null,
+          workouts: workouts.results || [], checkins: checkins.results || [],
+          reviews: reviews.results || [], messages: messages.results || []
+        }, cors);
+      }
+
       // ── CLIENT AUTH ────────────────────────────────────────────
       if (url.pathname === '/client/login' && request.method === 'POST') {
         if (!env.DB) return bad('No DB', cors);

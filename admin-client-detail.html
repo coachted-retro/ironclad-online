@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1B4D8C">
+<title>Client Detail — Ironclad Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#1B4D8C;--red-dk:#0B2E52;--ink:#15171A;--ink3:#6B7280;--bg:#F2F4F7;--card:#FFFFFF;--line:#E5E7EB;--green:#1E9E5A;--green-lt:#E3F5EC;--amber:#B45309;--amber-lt:#FEF3C7;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px;padding-bottom:40px}
+.topbar{background:var(--ink);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+.wordmark{font-family:'Oswald';font-weight:800;font-size:17px;text-transform:uppercase}
+.badge{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:var(--red);padding:3px 9px;border-radius:20px}
+.wrap{max-width:700px;margin:0 auto;padding:20px 16px}
+.back-link{font-size:12.5px;color:var(--red);text-decoration:none;font-weight:700;display:inline-block;margin-bottom:14px}
+h1{font-family:'Oswald';font-size:22px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.sub{font-size:12.5px;color:var(--ink3);margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.section-label{font-family:'Oswald';font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+.status-pill{font-size:10.5px;font-weight:700;text-transform:uppercase;padding:3px 9px;border-radius:20px;display:inline-block}
+.status-active{background:var(--green-lt);color:var(--green)}
+.status-prospect{background:var(--amber-lt);color:var(--amber)}
+.status-other{background:#F3F4F6;color:var(--ink3)}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.field-row{padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.field-row:last-child{border-bottom:none}
+.field-label{font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--ink3);margin-bottom:2px}
+.log-row{padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.log-row:last-child{border-bottom:none}
+.stars{color:var(--red)}
+.empty{color:var(--ink3);font-size:13px;padding:8px 0}
+.parq-flag{background:#FDEDE7;color:#B91C1C;border-radius:8px;padding:8px 12px;font-size:12.5px;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="wordmark">Ironclad</div>
+  <div class="badge">Client Detail</div>
+</div>
+<div class="wrap">
+  <a href="admin-dashboard.html" class="back-link">&larr; Back to Online Clients</a>
+  <div id="content">Loading...</div>
+</div>
+<script>
+const WORKER = WORKER_URL;
+let SESSION = null;
+const clientId = new URLSearchParams(location.search).get('id');
+
+(function(){
+  const saved = localStorage.getItem('ironclad_admin_session');
+  if (!saved) { location.href = 'admin-login.html'; return; }
+  try { SESSION = JSON.parse(saved); } catch(e) { location.href = 'admin-login.html'; return; }
+  if (!clientId) { location.href = 'admin-dashboard.html'; return; }
+  load();
+})();
+
+async function load(){
+  const el = document.getElementById('content');
+  try {
+    const r = await fetch(WORKER + '/admin/client-detail?token=' + encodeURIComponent(SESSION.token) + '&client_id=' + clientId);
+    const d = await r.json();
+    if (!d.ok) { el.innerHTML = '<div class="empty">' + esc(d.error || 'Could not load client.') + '</div>'; return; }
+    render(d);
+  } catch(e) {
+    el.innerHTML = '<div class="empty">Connection error loading client.</div>';
+  }
+}
+
+function render(d){
+  const c = d.client;
+  const statusClass = c.status === 'active' ? 'status-active' : c.status === 'prospect' ? 'status-prospect' : 'status-other';
+  const o = d.onboarding || {};
+
+  let html = `
+    <h1>${esc(c.first_name)} ${esc(c.last_name || '')}</h1>
+    <div class="sub">${esc(c.email || '')}${c.phone ? ' · ' + esc(c.phone) : ''}</div>
+    <div class="card">
+      <div class="field-grid">
+        <div class="field-row"><div class="field-label">Status</div><span class="status-pill ${statusClass}">${esc(c.status)}</span></div>
+        <div class="field-row"><div class="field-label">Plan</div>${esc(c.subscription_plan || 'None yet')}</div>
+        <div class="field-row"><div class="field-label">Goal</div>${esc(c.goal_primary || '—')}</div>
+        <div class="field-row"><div class="field-label">Signed Up</div>${new Date(c.created_at).toLocaleDateString()}</div>
+      </div>
+    </div>`;
+
+  if (o.parq_flags && o.parq_flags.length) {
+    html += `<div class="card"><div class="section-label">⚠ Health Flags from Assessment</div>`;
+    o.parq_flags.forEach(f => html += `<div class="parq-flag">${esc(f)}</div>`);
+    html += `</div>`;
+  }
+
+  html += `
+    <div class="card">
+      <div class="section-label">Assessment Answers</div>
+      <div class="field-grid">
+        ${o.age ? `<div class="field-row"><div class="field-label">Age</div>${esc(o.age)}</div>` : ''}
+        ${o.sex ? `<div class="field-row"><div class="field-label">Sex</div>${esc(o.sex)}</div>` : ''}
+        ${o.height ? `<div class="field-row"><div class="field-label">Height</div>${esc(o.height)}</div>` : ''}
+        ${o.weight_lbs ? `<div class="field-row"><div class="field-label">Weight</div>${esc(o.weight_lbs)} lbs</div>` : ''}
+        ${o.weight_trend ? `<div class="field-row"><div class="field-label">Weight Trend</div>${esc(o.weight_trend)}</div>` : ''}
+        ${o.experience ? `<div class="field-row"><div class="field-label">Experience</div>${esc(o.experience)}</div>` : ''}
+        ${o.days_per_week ? `<div class="field-row"><div class="field-label">Availability</div>${esc(o.days_per_week)}</div>` : ''}
+        ${o.equipment_access ? `<div class="field-row"><div class="field-label">Equipment</div>${esc(o.equipment_access)}</div>` : ''}
+        ${o.training_preference ? `<div class="field-row"><div class="field-label">Training Preference</div>${esc(o.training_preference)}</div>` : ''}
+        ${o.zip ? `<div class="field-row"><div class="field-label">Zip</div>${esc(o.zip)}</div>` : ''}
+        ${o.commitment_level ? `<div class="field-row"><div class="field-label">Commitment Level</div>${esc(o.commitment_level)}</div>` : ''}
+      </div>
+      ${o.injuries ? `<div class="field-row"><div class="field-label">Injuries</div>${esc(o.injuries)}</div>` : ''}
+      ${o.dietary ? `<div class="field-row"><div class="field-label">Dietary</div>${esc(o.dietary)}</div>` : ''}
+      ${o.tried_before ? `<div class="field-row"><div class="field-label">Tried Before</div>${esc(o.tried_before)}</div>` : ''}
+    </div>
+
+    <div class="card">
+      <div class="section-label">Current Program</div>
+      ${d.program ? `<div>${esc(d.program.bundle_name)}<br><span style="color:var(--ink3);font-size:12px">Selected ${new Date(d.program.selected_at).toLocaleDateString()}</span></div>` : '<div class="empty">No program selected yet.</div>'}
+    </div>
+
+    <div class="card">
+      <div class="section-label">Recent Workouts (${d.workouts.length})</div>
+      ${d.workouts.length ? d.workouts.map(w => `<div class="log-row"><b>${new Date(w.log_date).toLocaleDateString()}</b> — ${esc(w.routine_label || 'Workout')}</div>`).join('') : '<div class="empty">No workouts logged yet.</div>'}
+    </div>
+
+    <div class="card">
+      <div class="section-label">Weekly Check-Ins (${d.checkins.length})</div>
+      ${d.checkins.length ? d.checkins.map(ci => `
+        <div class="log-row">
+          <b>${new Date(ci.submitted_at).toLocaleDateString()}</b>
+          ${ci.training_review ? `<div style="color:var(--ink3);margin-top:2px">Training: ${esc(ci.training_review)}</div>` : ''}
+          ${ci.soreness_pain ? `<div style="color:var(--ink3)">Soreness/Pain: ${esc(ci.soreness_pain)}</div>` : ''}
+          ${ci.nutrition_adherence ? `<div style="color:var(--ink3)">Nutrition: ${esc(ci.nutrition_adherence)}</div>` : ''}
+          ${ci.questions ? `<div style="color:var(--ink3)">Questions: ${esc(ci.questions)}</div>` : ''}
+        </div>`).join('') : '<div class="empty">No check-ins submitted yet.</div>'}
+    </div>
+
+    <div class="card">
+      <div class="section-label">Reviews (${d.reviews.length})</div>
+      ${d.reviews.length ? d.reviews.map(rv => `
+        <div class="log-row">
+          <span class="stars">${'★'.repeat(rv.rating)}${'☆'.repeat(5-rv.rating)}</span>
+          <span style="color:var(--ink3);font-size:11px"> · ${esc(rv.status)}${rv.consent_to_feature ? ' · consented to feature' : ''}</span>
+          ${rv.comment ? `<div style="margin-top:4px">${esc(rv.comment)}</div>` : ''}
+        </div>`).join('') : '<div class="empty">No reviews submitted yet.</div>'}
+    </div>
+
+    <div class="card">
+      <div class="section-label">Recent Messages (${d.messages.length})</div>
+      ${d.messages.length ? d.messages.map(m => `
+        <div class="log-row"><b>${esc(m.sender === 'coach' ? (m.coach_name || 'Coach') : 'Client')}:</b> ${esc(m.body)}</div>`).join('') : '<div class="empty">No messages yet.</div>'}
+    </div>
+  `;
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>
