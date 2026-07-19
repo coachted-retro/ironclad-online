@@ -561,6 +561,153 @@ export default {
         return ok({ logs: rows.results || [] }, cors);
       }
 
+      // ── CIRCLES & CHALLENGES ────────────────────────────────────
+      // Community engagement between clients -- friends, family,
+      // community groups. Deliberately restricted to process-based
+      // metrics (workouts logged, nutrition tracking consistency,
+      // activity streaks) -- never weight, body composition, or
+      // calories. A "who lost the most weight" competition between
+      // friends and family is exactly the kind of thing that can turn
+      // genuinely harmful, so that's not an option here, by design,
+      // not an oversight.
+      const ALLOWED_METRICS = ['workouts_logged', 'nutrition_logs', 'consistency_streak'];
+
+      function genJoinCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        return code;
+      }
+
+      if (url.pathname === '/client/circles/create' && request.method === 'POST') {
+        if (!env.DB) return bad('No DB', cors);
+        const b = await request.json().catch(() => ({}));
+        const claims = await verifyToken(b.token, SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        if (!b.name) return bad('Circle name required', cors);
+        const code = genJoinCode();
+        const res = await env.DB.prepare('INSERT INTO circles (name,created_by_client_id,join_code) VALUES (?,?,?)')
+          .bind(b.name, claims.id, code).run();
+        await env.DB.prepare('INSERT INTO circle_members (circle_id,client_id) VALUES (?,?)')
+          .bind(res.meta.last_row_id, claims.id).run();
+        return ok({ circle_id: res.meta.last_row_id, join_code: code }, cors);
+      }
+
+      if (url.pathname === '/client/circles/join' && request.method === 'POST') {
+        if (!env.DB) return bad('No DB', cors);
+        const b = await request.json().catch(() => ({}));
+        const claims = await verifyToken(b.token, SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        const circle = await env.DB.prepare('SELECT * FROM circles WHERE join_code=?').bind((b.join_code || '').toUpperCase()).first();
+        if (!circle) return bad('Invalid join code', cors);
+        try {
+          await env.DB.prepare('INSERT INTO circle_members (circle_id,client_id) VALUES (?,?)').bind(circle.id, claims.id).run();
+        } catch (e) { /* already a member -- fine, not an error */ }
+        return ok({ circle_id: circle.id, name: circle.name }, cors);
+      }
+
+      if (url.pathname === '/client/circles' && request.method === 'GET') {
+        if (!env.DB) return bad('No DB', cors);
+        const claims = await verifyToken(url.searchParams.get('token'), SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        const rows = await env.DB.prepare(`
+          SELECT c.*, (SELECT COUNT(*) FROM circle_members WHERE circle_id=c.id) as member_count
+          FROM circles c JOIN circle_members cm ON cm.circle_id = c.id
+          WHERE cm.client_id = ? ORDER BY c.created_at DESC
+        `).bind(claims.id).all();
+        return ok({ circles: rows.results || [] }, cors);
+      }
+
+      if (url.pathname === '/client/circle-detail' && request.method === 'GET') {
+        if (!env.DB) return bad('No DB', cors);
+        const claims = await verifyToken(url.searchParams.get('token'), SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        const circleId = parseInt(url.searchParams.get('circle_id'), 10);
+        const membership = await env.DB.prepare('SELECT 1 FROM circle_members WHERE circle_id=? AND client_id=?').bind(circleId, claims.id).first();
+        if (!membership) return bad('Not a member of this circle', cors);
+        const [circle, members, challenges] = await Promise.all([
+          env.DB.prepare('SELECT * FROM circles WHERE id=?').bind(circleId).first(),
+          env.DB.prepare(`
+            SELECT cl.id, cl.first_name, cl.last_name FROM circle_members cm
+            JOIN clients cl ON cl.id = cm.client_id WHERE cm.circle_id=?
+          `).bind(circleId).all(),
+          env.DB.prepare('SELECT * FROM challenges WHERE circle_id=? ORDER BY start_date DESC').bind(circleId).all()
+        ]);
+        return ok({ circle, members: members.results || [], challenges: challenges.results || [] }, cors);
+      }
+
+      if (url.pathname === '/client/challenges/create' && request.method === 'POST') {
+        if (!env.DB) return bad('No DB', cors);
+        const b = await request.json().catch(() => ({}));
+        const claims = await verifyToken(b.token, SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        const membership = await env.DB.prepare('SELECT 1 FROM circle_members WHERE circle_id=? AND client_id=?').bind(b.circle_id, claims.id).first();
+        if (!membership) return bad('Not a member of this circle', cors);
+        if (!ALLOWED_METRICS.includes(b.metric_type)) return bad('Invalid challenge type', cors);
+        if (!b.name || !b.start_date || !b.end_date) return bad('name, start_date, end_date required', cors);
+        const res = await env.DB.prepare('INSERT INTO challenges (circle_id,name,metric_type,start_date,end_date,created_by_client_id) VALUES (?,?,?,?,?,?)')
+          .bind(b.circle_id, b.name, b.metric_type, b.start_date, b.end_date, claims.id).run();
+        return ok({ challenge_id: res.meta.last_row_id }, cors);
+      }
+
+      if (url.pathname === '/client/challenge-leaderboard' && request.method === 'GET') {
+        if (!env.DB) return bad('No DB', cors);
+        const claims = await verifyToken(url.searchParams.get('token'), SECRET);
+        if (!claims || claims.role !== 'client') return bad('Unauthorized', cors);
+        const challengeId = parseInt(url.searchParams.get('challenge_id'), 10);
+        const challenge = await env.DB.prepare('SELECT * FROM challenges WHERE id=?').bind(challengeId).first();
+        if (!challenge) return bad('Challenge not found', cors);
+        const membership = await env.DB.prepare('SELECT 1 FROM circle_members WHERE circle_id=? AND client_id=?').bind(challenge.circle_id, claims.id).first();
+        if (!membership) return bad('Not a member of this circle', cors);
+
+        const members = await env.DB.prepare(`
+          SELECT cl.id, cl.first_name, cl.last_name FROM circle_members cm
+          JOIN clients cl ON cl.id = cm.client_id WHERE cm.circle_id=?
+        `).bind(challenge.circle_id).all();
+
+        let scores = [];
+        if (challenge.metric_type === 'workouts_logged') {
+          const rows = await env.DB.prepare(`
+            SELECT client_id, COUNT(*) as score FROM workout_logs
+            WHERE log_date BETWEEN ? AND ? GROUP BY client_id
+          `).bind(challenge.start_date, challenge.end_date).all();
+          scores = rows.results || [];
+        } else if (challenge.metric_type === 'nutrition_logs') {
+          const rows = await env.DB.prepare(`
+            SELECT client_id, COUNT(*) as score FROM nutrition_logs
+            WHERE date(logged_at) BETWEEN ? AND ? GROUP BY client_id
+          `).bind(challenge.start_date, challenge.end_date).all();
+          scores = rows.results || [];
+        } else if (challenge.metric_type === 'consistency_streak') {
+          // Longest run of consecutive days with any logged activity
+          // (workout, nutrition log, or weekly check-in) in range.
+          const memberIds = (members.results || []).map(m => m.id);
+          for (const mid of memberIds) {
+            const dates = await env.DB.prepare(`
+              SELECT DISTINCT d FROM (
+                SELECT log_date as d FROM workout_logs WHERE client_id=? AND log_date BETWEEN ? AND ?
+                UNION SELECT date(logged_at) as d FROM nutrition_logs WHERE client_id=? AND date(logged_at) BETWEEN ? AND ?
+                UNION SELECT date(submitted_at) as d FROM weekly_checkins WHERE client_id=? AND date(submitted_at) BETWEEN ? AND ?
+              ) ORDER BY d ASC
+            `).bind(mid, challenge.start_date, challenge.end_date, mid, challenge.start_date, challenge.end_date, mid, challenge.start_date, challenge.end_date).all();
+            const days = (dates.results || []).map(r => new Date(r.d).getTime());
+            let longest = 0, current = 0, prev = null;
+            for (const t of days) {
+              if (prev !== null && t - prev === 86400000) current++; else current = 1;
+              longest = Math.max(longest, current);
+              prev = t;
+            }
+            scores.push({ client_id: mid, score: longest });
+          }
+        }
+
+        const scoreMap = Object.fromEntries(scores.map(s => [s.client_id, s.score]));
+        const leaderboard = (members.results || [])
+          .map(m => ({ ...m, score: scoreMap[m.id] || 0 }))
+          .sort((a, b) => b.score - a.score);
+        return ok({ challenge, leaderboard }, cors);
+      }
+
       // ── PORTAL MESSAGES (client <-> AI coach / Ted) ────────────
       if (url.pathname === '/portal/messages' && request.method === 'GET') {
         if (!env.DB) return bad('No DB', cors);
